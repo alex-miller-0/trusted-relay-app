@@ -4,6 +4,10 @@ import { connect } from 'react-redux';
 // import { Promise } from 'bluebird';
 import { Button, Divider, Dropdown, Icon, Input, Menu, Message, Segment } from 'semantic-ui-react';
 import { relayer } from '../actions/index'
+const leftPad = require('left-pad');
+import { getUserBalance } from '../lib/metamask.js';
+import { getNetworks } from '../lib/networks.js';
+import { checkSubmitInput } from '../lib/errorChecks.js';
 
 class RelayerComponent extends Component {
   constructor(props){
@@ -12,34 +16,45 @@ class RelayerComponent extends Component {
 
   componentDidMount() {
     let { dispatch } = this.props;
-    if (web3) {
-      console.log('web3', web3)
-      dispatch({ type: 'UPDATE_USER', result: web3.eth.accounts[0] })
-      let provider = web3.version.network;
-      if (typeof provider == 'number') {
-        dispatch({ type: 'UPDATE_WEB3_PROVIDER', result: provider })
-      }
-    }
-  }
+    const interval = setInterval(function() {
+      const provider = web3.version.network;
 
-  componentDidUpdate() {
-    console.log('update')
+      if (provider != null) {
+        clearInterval(interval);
+        dispatch({ type: 'UPDATE_USER', result: web3.eth.accounts[0] });
+        dispatch({ type: 'UPDATE_WEB3_PROVIDER', result: provider });
+        getNetworks(provider, (err, result) => {
+          dispatch({ type: 'CURRENT_NETWORK', result: result.current });
+          dispatch({ type: 'DESTINATION_NETWORKS', result: result.networks });
+        })
+      }
+    }, 100);
   }
 
   updateDepositAmount(evt, data) {
-    console.log('deposit', data);
+    this.props.dispatch({ type: 'UPDATE_DEPOSIT_AMOUNT', result: parseInt(data.value) })
   }
 
   updateToken(evt, data) {
-    console.log('token to deposit', data);
+    this.props.dispatch({ type: 'UPDATE_DEPOSIT_TOKEN', result: data.value })
+    if (data.value.length == 42) {
+      getUserBalance(data.value, web3, this.props.state)
+      .then((balance) => {
+        this.props.dispatch({ type: 'UPDATE_USER_BAL', result: balance })
+      })
+    }
+  }
+
+  updateDestinationNetwork(evt, data) {
+    this.props.dispatch({ type: 'UPDATE_DESTINATION_ID', result: data.value })
   }
 
   renderCurrentNetwork() {
-    let { state } = this.props;
+    const { state } = this.props;
     if (state.web3_provider != null) {
       return (
         <Segment raised>
-          <b>{state.web3_provider}</b> (http://mainnet.infura.io)
+          <b>{state.currentNetwork.name}</b> (http://mainnet.infura.io)
         </Segment>
       );
     } else {
@@ -57,11 +72,39 @@ class RelayerComponent extends Component {
     }
   }
 
-  renderPage() {
-    const destinations = [
-      { text: 'Grid+ Network', value: '101' }
-    ]
+  renderDestinations() {
+    const { state } = this.props;
+    if (state.destinations.length === 0) {
 
+    }
+  }
+
+  renderBalance() {
+    const { state } = this.props;
+    if (state.userBal) {
+      return (<p>Current balance: <b>{state.userBal}</b></p>);
+    } else {
+      return;
+    }
+  }
+
+  submit() {
+    let { state } = this.props;
+    let req = {
+      amount: state.deposit_amount,
+      token: state.deposit_token,
+    }
+    checkSubmitInput(req, state)
+    .then((result) => {
+      console.log('got result', result);
+    })
+    .catch((err) => {
+      console.log('got error', err);
+    })
+  }
+
+  render() {
+    const { state } = this.props;
     return (
       <div>
         <div className="container">
@@ -75,34 +118,31 @@ class RelayerComponent extends Component {
           {this.renderCurrentNetwork()}
           <Divider/>
           <p><b>Destination network:</b></p>
-          <Dropdown placeholder='Destination Network' fluid selection options={destinations} />
+          <Dropdown
+            placeholder='Grid+ Network'
+            fluid selection
+            options={state.destinations.length ? state.destinations : []}
+            onChange={this.updateDestinationNetwork.bind(this)}
+          />
           <Divider/>
           <h3>Deposit Tokens</h3>
           <p>Choose an ERC20 token and an amount to move. Once you make the deposit, a relayer will send your tokens to your desired network (destination network).</p>
           <br/>
           <p><b>Choose token to move:</b></p>
           <Input placeholder='0x12...ef' onChange={this.updateToken.bind(this)} fluid/>
-          <br/><br/>
+          <br/>
+          {this.renderBalance()}
+          <br/>
           <p><b>Choose amount:</b></p>
           <Input placeholder='0.1' onChange={this.updateDepositAmount.bind(this)}/>
           <Divider/>
           <br/>
-          <Button primary>
+          <Button primary onClick={this.submit.bind(this)}>
             Move Tokens
           </Button>
         </div>
       </div>
     );
-  }
-
-  render(){
-    let { state } = this.props;
-    console.log('state?', state);
-    if (state.web3_provider == null) {
-      return this.renderPage();
-    } else {
-      return (<p>{state.web3_provider}</p>);
-    }
   }
 
 }

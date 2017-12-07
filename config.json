@@ -1,0 +1,10 @@
+{
+  "networks": {
+    "1": {
+      "name": "Mainnet", "value": "1", "gateway": "https://mainnet.infura.io"
+    },
+    "10000000": {
+      "name": "Grid+ Network", "value": "101", "gateway": "https://relay.gridplus.io"
+    }
+  }
+}
