@@ -1,3 +1,4 @@
+import { connect } from "react-redux";
 import React, { Component } from 'react';
 import { dependencies, devDependencies } from '../../../package.json';
 import { Button, Divider, Dropdown, Icon, Input, Menu, Message, Segment } from 'semantic-ui-react';
@@ -84,4 +85,11 @@ class App extends Component {
   }
 }
 
-export default App;
+const mapStateToProps = state => {
+  return {
+    percentSold: state.tokens.percentSold,
+    tokensSold: state.tokens.sold,
+  };
+};
+
+export default connect(mapStateToProps)(App);

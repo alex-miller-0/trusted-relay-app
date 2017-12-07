@@ -2,11 +2,13 @@ import 'styles/app.scss';
 
 import React from 'react';
 import { AppContainer } from 'react-hot-loader';
+import {Provider} from 'react-redux';
 import ReactDOM from 'react-dom';
 import {
   BrowserRouter as Router,
   Route
 } from 'react-router-dom';
+import store from './store';
 
 import { App } from 'components';
 
@@ -18,13 +20,14 @@ const routes = (
 
 const outlet = document.getElementById('app')
 
+
 const render = () => {
   ReactDOM.render(
-    <AppContainer>
-      {routes}
-    </AppContainer>,
-    outlet
-  );
+    <Provider store={store}>
+      <AppContainer>
+        {routes}
+      </AppContainer>,
+    </Provider>, outlet);
 };
 
 render();
