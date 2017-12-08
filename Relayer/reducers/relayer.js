@@ -1,21 +1,37 @@
 const INITIAL_STATE = {
-  deposit_amount: 0,
-  deposit_token: null,
+  allowance: null,
+  decimals: null,
+  depositAmount: 0,
+  depositToken: null,
   destination: 101,
-  user: '',
+  user: null,
   userBal: null,
-  web3_provider: null,
+  web3Provider: null,
   currentNetwork: {},
+  destinationId: null,
   destinations: [],
+  input: false,    // Input has been checked
 }
 
 export default function relayer(state = INITIAL_STATE, action) {
   switch(action.type) {
+    case 'ALLOWANCE':
+      return {
+        ...state,
+        allowance: action.result,
+      }
+      break;
     case 'CURRENT_NETWORK':
       return {
         ...state,
         currentNetwork: action.result
       };
+      break;
+    case 'DECIMALS':
+      return {
+        ...state,
+        decimals: action.result,
+      }
       break;
     case 'DESTINATION_NETWORKS':
       return {
@@ -23,22 +39,27 @@ export default function relayer(state = INITIAL_STATE, action) {
         destinations: action.result
       };
       break;
+    case 'INPUT_CHECK':
+      return {
+        ...state,
+        input: action.result,
+      }
     case 'UPDATE_DEPOSIT_AMOUNT':
       return {
         ...state,
-        deposit_amount: action.result
+        depositAmount: action.result
       };
       break;
     case 'UPDATE_DEPOSIT_TOKEN':
       return {
         ...state,
-        deposit_token: action.result
+        depositToken: action.result
       };
       break;
     case 'UPDATE_DESTINATION_ID':
       return {
         ...state,
-        destination: action.result
+        destinationId: action.result
       };
       break;
     case 'UPDATE_USER':
@@ -56,7 +77,7 @@ export default function relayer(state = INITIAL_STATE, action) {
     case 'UPDATE_WEB3_PROVIDER':
       return {
         ...state,
-        web3_provider: action.result
+        web3Provider: action.result
       };
       break;
     default:

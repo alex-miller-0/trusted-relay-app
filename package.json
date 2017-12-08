@@ -4,7 +4,7 @@
   "description": "Frontend for a Trusted Relayer Network",
   "main": "./index.js",
   "scripts": {
-    "wds": "webpack-dev-server"
+    "start": "webpack-dev-server"
   },
   "contributors": [
     {
@@ -15,6 +15,7 @@
   "dependencies": {
     "bluebird": "^3.4.1",
     "css-loader": "^0.25.0",
+    "ethereumjs-util": "^5.1.2",
     "json-loader": "^0.5.4",
     "jsonfile": "^2.3.1",
     "left-pad": "^1.2.0",
@@ -29,6 +30,7 @@
     "redux-thunk": "^2.1.0",
     "semantic-ui-css": "^2.2.12",
     "semantic-ui-react": "^0.77.0",
+    "solidity-sha3": "^0.4.1",
     "url-loader": "^0.5.7"
   },
   "devDependencies": {

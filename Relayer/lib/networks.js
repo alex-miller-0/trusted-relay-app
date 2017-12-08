@@ -4,12 +4,19 @@ function getNetworks(currentNetwork, cb) {
   let current;
   let networks = [];
   Object.keys(config.networks).forEach((i) => {
-    if (currentNetwork == i) { current = config.networks[i] }
-    else {
+    const net = config.networks[i];
+    if (currentNetwork == i) {
+      current = {
+        text: `${net.name} (${net.gateway})`,
+        name: net.name,
+        value: net.value
+      } ;
+    } else {
       const tmp = {
-        "text": `${config.networks[i].name} (${config.networks[i].gateway})`,
-        "value": config.networks[i].value
-      }
+        text: `${net.name} (${net.gateway})`,
+        value: net.value,
+        name: net.name,
+      };
       networks.push(tmp);
     }
   })

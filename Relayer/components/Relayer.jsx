@@ -5,7 +5,14 @@ import { connect } from 'react-redux';
 import { Button, Divider, Dropdown, Icon, Input, Menu, Message, Segment } from 'semantic-ui-react';
 import { relayer } from '../actions/index'
 const leftPad = require('left-pad');
-import { getUserBalance } from '../lib/metamask.js';
+import {
+  getAllowance,
+  getAllowanceUpdate,
+  getTokenDecimals,
+  getUserBalance,
+  setAllowance,
+  makeDeposit
+} from '../lib/metamask.js';
 import { getNetworks } from '../lib/networks.js';
 import { checkSubmitInput } from '../lib/errorChecks.js';
 
@@ -32,15 +39,42 @@ class RelayerComponent extends Component {
   }
 
   updateDepositAmount(evt, data) {
-    this.props.dispatch({ type: 'UPDATE_DEPOSIT_AMOUNT', result: parseInt(data.value) })
+    const { state, dispatch } = this.props;
+    const req = {
+      amount: state.depositAmount,
+      token: state.depositToken,
+    }
+    dispatch({ type: 'UPDATE_DEPOSIT_AMOUNT', result: parseInt(data.value) })
+    checkSubmitInput(req, state)
+    .then((input) => {
+      dispatch({ type: 'INPUT_CHECK', result: true });
+      return getAllowance(state, web3);
+    })
+    .then((allowance) => {
+      dispatch({ type: 'ALLOWANCE', result: allowance });
+      return getTokenDecimals(state.depositToken, web3);
+    })
+    .then((decimals) => {
+      dispatch({ type: 'DECIMALS', result: decimals });
+    })
+    .catch((err) => { console.log('got error', err); })
   }
 
   updateToken(evt, data) {
-    this.props.dispatch({ type: 'UPDATE_DEPOSIT_TOKEN', result: data.value })
+    const { state, dispatch } = this.props;
+    const req = {
+      amount: state.depositAmount,
+      token: state.depositToken,
+    }
+    dispatch({ type: 'UPDATE_DEPOSIT_TOKEN', result: data.value })
     if (data.value.length == 42) {
       getUserBalance(data.value, web3, this.props.state)
       .then((balance) => {
-        this.props.dispatch({ type: 'UPDATE_USER_BAL', result: balance })
+        dispatch({ type: 'UPDATE_USER_BAL', result: balance })
+        return checkSubmitInput(req, state)
+      })
+      .then((input) => {
+        dispatch({ type: 'INPUT_CHECK', result: true });
       })
     }
   }
@@ -49,33 +83,30 @@ class RelayerComponent extends Component {
     this.props.dispatch({ type: 'UPDATE_DESTINATION_ID', result: data.value })
   }
 
+  renderWaiting(header, msg) {
+    return (
+      <Message icon>
+        <Icon name='circle notched' loading />
+        <Message.Content>
+          <Message.Header>
+            {header}
+          </Message.Header>
+          {msg}
+        </Message.Content>
+      </Message>
+    )
+  }
+
   renderCurrentNetwork() {
     const { state } = this.props;
-    if (state.web3_provider != null) {
+    if (state.web3Provider != null) {
       return (
         <Segment raised>
           <b>{state.currentNetwork.name}</b> (http://mainnet.infura.io)
         </Segment>
       );
     } else {
-      return (
-        <Message icon>
-          <Icon name='circle notched' loading />
-          <Message.Content>
-            <Message.Header>
-              Please Wait
-            </Message.Header>
-            Loading your network.
-          </Message.Content>
-        </Message>
-      );
-    }
-  }
-
-  renderDestinations() {
-    const { state } = this.props;
-    if (state.destinations.length === 0) {
-
+      return this.renderWaiting('Please Wait', 'Loading your network.')
     }
   }
 
@@ -89,19 +120,71 @@ class RelayerComponent extends Component {
   }
 
   submit() {
-    let { state } = this.props;
+    let { state, dispatch } = this.props;
     let req = {
-      amount: state.deposit_amount,
-      token: state.deposit_token,
+      amount: state.depositAmount,
+      token: state.depositToken,
     }
     checkSubmitInput(req, state)
-    .then((result) => {
-      console.log('got result', result);
+    .then(() => {
+      dispatch({ type: 'INPUT_CHECK', result: true });
+      return makeDeposit(state, web3)
+    })
+    .then(() => {
+      console.log('made it')
     })
     .catch((err) => {
       console.log('got error', err);
     })
   }
+
+  allow() {
+    console.log('allow')
+    const { state, dispatch } = this.props;
+    setAllowance(state, web3)
+    .then((success) => { return getAllowance(state, web3); })
+    .then((allowance) => {
+      dispatch({ type: 'ALLOWANCE', result: -1 });
+      // This may update immediately, but we'll probably have to sit on an
+      // interval until the value updates.
+      return getAllowanceUpdate(allowance, allowance, state, web3)
+    })
+    .then((newAllowance) => {
+      dispatch({ type: 'ALLOWANCE', result: newAllowance });
+    })
+    .catch((err) => { console.log('Error setting allowance', err); })
+  }
+
+  renderActionButton() {
+    let { state } = this.props;
+    // TODO Need BN
+    let allowance = state.allowance / (10 ** state.decimals);
+    console.log('allowance', allowance);
+    let amount = state.depositAmount
+    if (state.input === false) {
+      return;
+    } else if (allowance === -1) {
+      return (
+        <Button loading>
+          Waiting
+        </Button>
+      )
+    } else if (allowance < amount) {
+      return (
+        <Button primary onClick={this.allow.bind(this)}>
+          Step 1: Allow Movement
+        </Button>
+      )
+    } else {
+      return (
+        <Button primary onClick={this.submit.bind(this)}>
+          Move Tokens
+        </Button>
+      )
+    }
+  }
+
+
 
   render() {
     const { state } = this.props;
@@ -119,7 +202,7 @@ class RelayerComponent extends Component {
           <Divider/>
           <p><b>Destination network:</b></p>
           <Dropdown
-            placeholder='Grid+ Network'
+            placeholder='Choose Network'
             fluid selection
             options={state.destinations.length ? state.destinations : []}
             onChange={this.updateDestinationNetwork.bind(this)}
@@ -137,9 +220,7 @@ class RelayerComponent extends Component {
           <Input placeholder='0.1' onChange={this.updateDepositAmount.bind(this)}/>
           <Divider/>
           <br/>
-          <Button primary onClick={this.submit.bind(this)}>
-            Move Tokens
-          </Button>
+          {this.renderActionButton()}
         </div>
       </div>
     );

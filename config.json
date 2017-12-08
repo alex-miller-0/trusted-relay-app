@@ -5,6 +5,12 @@
     },
     "10000000": {
       "name": "Grid+ Network", "value": "101", "gateway": "https://relay.gridplus.io"
+    },
+    "5777": {
+      "name": "origin", "value": "0xcc1bd437d48342a3cfab5428cf07ac557e7131c5", "gateway": "http://localhost:7545"
+    },
+    "1512683302313": {
+      "name": "dest", "value": "0xD2080ae67923bFBe0acCDa962aeda3409b7f1AD7", "gateway": "http://localhost:7546"
     }
   }
 }
