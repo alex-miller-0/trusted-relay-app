@@ -1,25 +1,34 @@
 const leftPad = require('left-pad');
 const sha3 = require('solidity-sha3').default;
 const ethUtil = require('ethereumjs-util');
+const sigUtil = require('eth-sig-util');
 
 function getUserBalance(token, web3, state) {
   return new Promise((resolve, reject) => {
-
     const data = `0x70a08231${leftPad(state.user.slice(2), 64, '0')}`;
-    console.log('forming data', data)
     // Get the total balance (atomic units) for the user
-
     web3.eth.call({ to: token, data: data}, (err, res) => {
-      if (err || res == '0x0') { return reject(err); }
-      console.log('res,', res, 'err', err);
+      if (err || res == '0x0') { return reject(err || 'Could not get balance'); }
       // Get decimals of the token
       const decData = '0x313ce567';
       web3.eth.call({ to: token, data: decData }, (err, dec) => {
         if (err) { return reject(err); }
-        console.log('dec', dec)
         const userBal = parseInt(res, 16) / 10 ** parseInt(dec, 16);
         resolve(userBal);
       })
+    })
+  })
+}
+
+function getUserBalanceUpdate(oldBal, newBal, state, web3) {
+  return new Promise((resolve, reject) => {
+    setTimeout(() => {
+      if (oldBal != newBal) { return resolve(newBal); }
+      getUserBalance(state.depositToken, web3, state)
+      .then((balance) => {
+        return resolve(getUserBalanceUpdate(newBal, balance, state, web3));
+      })
+      .catch((err) => { return reject(err); })
     })
   })
 }
@@ -38,14 +47,11 @@ function getAllowance(state, web3) {
 
 function getAllowanceUpdate(oldAllow, newAllow, state, web3) {
   return new Promise((resolve, reject) => {
-    console.log('going');
     setTimeout(() => {
-      console.log('newAllow', newAllow, 'oldAllow', oldAllow);
       // Set promise interval to check for a new allowance
-      if (oldAllow != newAllow) { console.log('resolving', newAllow); return resolve(newAllow); }
+      if (oldAllow != newAllow) { return resolve(newAllow); }
       getAllowance(state, web3)
       .then((allowance) => {
-        console.log('got allowance', allowance);
         return resolve(getAllowanceUpdate(newAllow, allowance, state, web3));
       })
       .catch((err) => { return reject(err); })
@@ -58,10 +64,15 @@ function setAllowance(state, web3) {
     const spender = leftPad(state.currentNetwork.value.slice(2), 64, '0');
     const amount = leftPad(state.depositAmount.toString(16), 64, '0');
     const data = `0x095ea7b3${spender}${amount}`;
-    web3.eth.sendTransaction({ to: state.depositToken, data: data }, (err, res) => {
-      if (err) { return reject(err); }
-      return resolve(res);
+    getNonce(web3)
+    .then((nonce) => {
+      console.log('got nonce', nonce);
+      web3.eth.sendTransaction({ to: state.depositToken, data: data, nonce: nonce }, (err, res) => {
+        if (err) { return reject(err); }
+        return resolve(res);
+      })
     })
+    .catch((err) => { return reject(err); })
   })
 }
 
@@ -85,6 +96,7 @@ function makeDeposit(state, web3) {
       fee: 0,
       ts: null,
     };
+    console.log('state', state);
     let msg;
     getNowFromGateway(data.origChain, web3)
     .then((ts) => {
@@ -98,12 +110,13 @@ function makeDeposit(state, web3) {
       console.log('msg', msg);
       console.log('hash', hash);
       console.log('got sig', sig);
+      const sanCheckPub = ethUtil.ecrecover(hashTmp, sig.v, Buffer.from(sig.r, 'hex'), Buffer.from(sig.s, 'hex'));
+      const sanCheckAddr = ethUtil.pubToAddress(sanCheckPub).toString('hex');
+      console.log('sanity check user', sanCheckAddr);
       return Deposit(data, hash, sig, web3);
     })
-    .then((receipt) => {
-      console.log('got receipt', receipt);
-    })
-    .catch((err) => { console.log('signing err', err); reject(err); })
+    .then((receipt) => { return resolve(receipt); })
+    .catch((err) => { return reject(err); })
   })
 }
 
@@ -120,10 +133,11 @@ function requestSig(msg, web3) {
     }, function(err, res) {
       if (err) { return reject(err); }
       else {
+        console.log('result', res);
         const sig = res.result.substr(2, res.result.length);
         const r = sig.substr(0, 64);
         const s = sig.substr(64, 64);
-        const v = parseInt(sig.substr(128, 2));
+        const v = parseInt(sig.substr(128, 2), 16);
         resolve({ r, s, v })
       }
     })
@@ -141,7 +155,7 @@ function getNowFromGateway(addr, web3) {
 }
 
 function getDepositERC20Data(data, hash, sig) {
-  const header = '0xaae63abf'
+  const header = '0x43a4f775'
   const a = hash.slice(2);
   const b = leftPad(sig.v.toString(16), 64, '0');
   const c = sig.r;
@@ -162,7 +176,6 @@ function Deposit(data, hash, sig, web3) {
     getNonce(web3)
     .then((nonce) => {
       console.log('got nonce', nonce);
-      console.log('account', web3.eth.accounts[0]);
       web3.eth.sendTransaction({
         from: web3.eth.accounts[0],
         to: data.origChain,
@@ -248,6 +261,7 @@ export {
   getAllowanceUpdate,
   getTokenDecimals,
   getUserBalance,
+  getUserBalanceUpdate,
   makeDeposit,
   setAllowance,
 }

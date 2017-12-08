@@ -10,11 +10,13 @@ import {
   getAllowanceUpdate,
   getTokenDecimals,
   getUserBalance,
+  getUserBalanceUpdate,
   setAllowance,
   makeDeposit
 } from '../lib/metamask.js';
 import { getNetworks } from '../lib/networks.js';
 import { checkSubmitInput } from '../lib/errorChecks.js';
+import Modal from './Modal.jsx';
 
 class RelayerComponent extends Component {
   constructor(props){
@@ -25,7 +27,6 @@ class RelayerComponent extends Component {
     let { dispatch } = this.props;
     const interval = setInterval(function() {
       const provider = web3.version.network;
-
       if (provider != null) {
         clearInterval(interval);
         dispatch({ type: 'UPDATE_USER', result: web3.eth.accounts[0] });
@@ -62,10 +63,7 @@ class RelayerComponent extends Component {
 
   updateToken(evt, data) {
     const { state, dispatch } = this.props;
-    const req = {
-      amount: state.depositAmount,
-      token: state.depositToken,
-    }
+    const req = { amount: state.depositAmount, token: state.depositToken };
     dispatch({ type: 'UPDATE_DEPOSIT_TOKEN', result: data.value })
     if (data.value.length == 42) {
       getUserBalance(data.value, web3, this.props.state)
@@ -112,7 +110,7 @@ class RelayerComponent extends Component {
 
   renderBalance() {
     const { state } = this.props;
-    if (state.userBal) {
+    if (state.userBal && state.userBal != -1) {
       return (<p>Current balance: <b>{state.userBal}</b></p>);
     } else {
       return;
@@ -130,8 +128,13 @@ class RelayerComponent extends Component {
       dispatch({ type: 'INPUT_CHECK', result: true });
       return makeDeposit(state, web3)
     })
-    .then(() => {
-      console.log('made it')
+    .then((receipt) => {
+      const bal = state.userBal;
+      dispatch({ type: 'UPDATE_USER_BAL', result: -1 });
+      return getUserBalanceUpdate(bal, bal, state, web3);
+    })
+    .then((newBalance) => {
+      dispatch({ type: 'UPDATE_USER_BAL', result: newBalance });
     })
     .catch((err) => {
       console.log('got error', err);
@@ -160,10 +163,11 @@ class RelayerComponent extends Component {
     // TODO Need BN
     let allowance = state.allowance / (10 ** state.decimals);
     console.log('allowance', allowance);
-    let amount = state.depositAmount
+    let amount = state.depositAmount;
+    let bal = state.userBal;
     if (state.input === false) {
       return;
-    } else if (allowance === -1) {
+    } else if (allowance === -1 || bal === -1) {
       return (
         <Button loading>
           Waiting
@@ -184,7 +188,11 @@ class RelayerComponent extends Component {
     }
   }
 
-
+  renderModal() {
+    const { state } = this.props;
+    state.modal = { active: true, title: 'test' }
+    if (true) { return <Modal/>}
+  }
 
   render() {
     const { state } = this.props;
@@ -221,6 +229,7 @@ class RelayerComponent extends Component {
           <Divider/>
           <br/>
           {this.renderActionButton()}
+          {this.renderModal()}
         </div>
       </div>
     );

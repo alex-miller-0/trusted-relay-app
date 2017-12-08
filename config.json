@@ -7,10 +7,10 @@
       "name": "Grid+ Network", "value": "101", "gateway": "https://relay.gridplus.io"
     },
     "5777": {
-      "name": "origin", "value": "0xcc1bd437d48342a3cfab5428cf07ac557e7131c5", "gateway": "http://localhost:7545"
+      "name": "origin", "value": "0xb93fe3eaa38e5742ff1f4a0210c637f53da28541", "gateway": "http://localhost:7545"
     },
     "1512683302313": {
-      "name": "dest", "value": "0xD2080ae67923bFBe0acCDa962aeda3409b7f1AD7", "gateway": "http://localhost:7546"
+      "name": "dest", "value": "0x3feCd42a7CBC45a325bA7b222a1BA386c5dE7E34", "gateway": "http://localhost:7546"
     }
   }
 }
