@@ -11,6 +11,7 @@ const INITIAL_STATE = {
   destinationId: null,
   destinations: [],
   input: false,    // Input has been checked
+  currentToken: null,
 }
 
 export default function relayer(state = INITIAL_STATE, action) {
@@ -43,6 +44,12 @@ export default function relayer(state = INITIAL_STATE, action) {
       return {
         ...state,
         input: action.result,
+      }
+      break;
+    case 'UPDATE_CURRENT_TOKEN':
+      return {
+        ...state,
+        currentToken: action.result,
       }
     case 'UPDATE_DEPOSIT_AMOUNT':
       return {

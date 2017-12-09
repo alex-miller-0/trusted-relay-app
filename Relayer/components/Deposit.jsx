@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import { connect } from 'react-redux';
 // import { FormControl, FormGroup, Button, Row, Col } from 'react-bootstrap';
 // import { Promise } from 'bluebird';
-import { Button, Divider, Dropdown, Icon, Input, Menu, Message, Segment } from 'semantic-ui-react';
+import { Button, Divider, Dropdown, Icon, Input, Menu, Message, Popup, Segment } from 'semantic-ui-react';
 import { relayer } from '../actions/index'
 const leftPad = require('left-pad');
 import {
@@ -47,16 +47,23 @@ class DepositComponent extends Component {
   updateToken(evt, data) {
     const { state, dispatch } = this.props;
     const req = { amount: state.depositAmount, token: state.depositToken };
-    dispatch({ type: 'UPDATE_DEPOSIT_TOKEN', result: data.value })
+    const dataSplit = data.value.split('-');
+    const token = dataSplit[0];
+    const bal = dataSplit[1];
+    const name = dataSplit[2];
+    const sym = dataSplit[3];
+    const currentToken = {
+      addr: token,
+      balance: bal,
+      name: name,
+      symbol: sym,
+    };
+    dispatch({ type: 'UPDATE_DEPOSIT_TOKEN', result: token });
+    dispatch({ type: 'UPDATE_USER_BAL', result: bal });
+    dispatch({ type: 'UPDATE_CURRENT_TOKEN', result: currentToken });
     if (data.value.length == 42) {
-      getUserBalance(data.value, web3)
-      .then((balance) => {
-        dispatch({ type: 'UPDATE_USER_BAL', result: balance })
-        return checkSubmitInput(req, state)
-      })
-      .then((input) => {
-        dispatch({ type: 'INPUT_CHECK', result: true });
-      })
+      return checkSubmitInput(req, state)
+      .then((input) => { dispatch({ type: 'INPUT_CHECK', result: true }); })
     }
   }
 
@@ -125,7 +132,6 @@ class DepositComponent extends Component {
   }
 
   allow() {
-    console.log('allow')
     const { state, dispatch } = this.props;
     setAllowance(state, web3)
     .then((success) => { return getAllowance(state, web3); })
@@ -145,7 +151,6 @@ class DepositComponent extends Component {
     let { state } = this.props;
     // TODO Need BN
     let allowance = state.allowance / (10 ** state.decimals);
-    console.log('allowance', allowance);
     let amount = state.depositAmount;
     let bal = state.userBal;
     if (state.input === false) {
@@ -158,18 +163,101 @@ class DepositComponent extends Component {
       )
     } else if (allowance < amount) {
       return (
-        <Button primary onClick={this.allow.bind(this)}>
-          Step 1: Allow Movement
-        </Button>
+        <div>
+          <Button primary onClick={this.allow.bind(this)}>
+            Step 1: Set Allowance
+          </Button>
+          <Popup
+            trigger={<Icon icon='add' />}
+            content="You will need to grant permission for the Gateway to move your tokens."
+            basic
+          />
+        </div>
       )
     } else {
       return (
-        <Button primary onClick={this.submit.bind(this)}>
-          Move Tokens
-        </Button>
+        <div>
+          <Button primary onClick={this.submit.bind(this)}>
+            Step 2: Start Relay
+          </Button>
+          <Popup
+            trigger={<Icon icon='add' />}
+            content="You must deposit your tokens to the Gateway before the relayer can award you new tokens on the other chain. Don't worry - these tokens won't be moved from the Gateway."
+            basic
+          />
+        </div>
       )
     }
   }
+
+
+  renderTokens() {
+    let { balances, state } = this.props;
+    let myTokens = [];
+    balances.balances.forEach((b) => {
+      const tmp = {
+        ...b,
+        text: `${b.name}: ${b.balance} ${b.symbol}`,
+        value: `${b.address}-${b.balance}-${b.name}-${b.symbol}`,
+      };
+      myTokens.push(tmp);
+    })
+    let defaultText;
+    let defaultValue;
+    if (state.currentToken) {
+      const t = state.currentToken;
+      defaultText = `${t.name}: ${t.balance} ${t.symbol}`;
+      defaultValue = `${t.address}-${t.balance}-${t.name}-${t.symbol}`;
+      if (!state.depositToken) {
+        dispatch({ type: 'UPDATE_DEPOSIT_TOKEN', result: t.address });
+      }
+    }
+
+    return (
+      <Dropdown
+        placeholder='Choose token'
+        fluid selection
+        options={myTokens}
+        text={defaultText}
+        value={defaultValue}
+        onChange={this.updateToken.bind(this)}
+      />
+    )
+  }
+
+  renderDestination() {
+    const { state } = this.props;
+    let destination = { text: null, value: null, name: null };
+    if (state.destinationId) {
+      state.destinations.forEach((d) => {
+        if (d.value == state.destinationId) {
+          return destination = d;
+        }
+      })
+    }
+    return (
+      <Dropdown
+        placeholder='Choose Network'
+        fluid selection
+        text={destination.text}
+        value={destination.value}
+        options={state.destinations.length ? state.destinations : []}
+        onChange={this.updateDestinationNetwork.bind(this)}
+      />
+    )
+  }
+
+  renderAmount() {
+    const { state } = this.props;
+    return (
+      <Input
+        placeholder='0.1234'
+        value={state.depositAmount || ''}
+        onChange={this.updateDepositAmount.bind(this)}
+      />
+    );
+  }
+
 
   renderModal() {
     const { state } = this.props;
@@ -189,23 +277,17 @@ class DepositComponent extends Component {
           {this.renderCurrentNetwork()}
           <Divider/>
           <p><b>Destination network:</b></p>
-          <Dropdown
-            placeholder='Choose Network'
-            fluid selection
-            options={state.destinations.length ? state.destinations : []}
-            onChange={this.updateDestinationNetwork.bind(this)}
-          />
+          {this.renderDestination()}
           <Divider/>
           <h3>Deposit Tokens</h3>
           <p>Choose an ERC20 token and an amount to move. Once you make the deposit, a relayer will send your tokens to your desired network (destination network).</p>
           <br/>
           <p><b>Choose token to move:</b></p>
-          <Input placeholder='0x12...ef' style={{width: 500}} onChange={this.updateToken.bind(this)} fluid/>
+          {this.renderTokens()}
           <br/>
-          {this.renderBalance()}
           <br/>
           <p><b>Choose amount:</b></p>
-          <Input placeholder='0.1' onChange={this.updateDepositAmount.bind(this)}/>
+          {this.renderAmount()}
           <Divider/>
           <br/>
           {this.renderActionButton()}
@@ -218,7 +300,8 @@ class DepositComponent extends Component {
 
 const mapStoreToProps = (store) => {
   return {
-    state: store.relayer
+    state: store.relayer,
+    balances: store.balances,
   };
 }
 
