@@ -1,5 +1,6 @@
-import { relayer } from './Relayer/reducers/index';
+import { balances, relayer } from './Relayer/reducers/index';
 
 module.exports = {
-  relayer
+  balances,
+  relayer,
 }

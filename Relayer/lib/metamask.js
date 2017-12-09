@@ -2,10 +2,12 @@ const leftPad = require('left-pad');
 const sha3 = require('solidity-sha3').default;
 const ethUtil = require('ethereumjs-util');
 const sigUtil = require('eth-sig-util');
+import { hexToAscii } from './util.js';
 
-function getUserBalance(token, web3, state) {
+
+function getUserBalance(token, web3) {
   return new Promise((resolve, reject) => {
-    const data = `0x70a08231${leftPad(state.user.slice(2), 64, '0')}`;
+    const data = `0x70a08231${leftPad(web3.eth.accounts[0].slice(2), 64, '0')}`;
     // Get the total balance (atomic units) for the user
     web3.eth.call({ to: token, data: data}, (err, res) => {
       if (err || res == '0x0') { return reject(err || 'Could not get balance'); }
@@ -19,6 +21,27 @@ function getUserBalance(token, web3, state) {
     })
   })
 }
+
+function getTokenData(token, web3) {
+  return new Promise((resolve, reject) => {
+    let data = { address: token };
+    getTokenName(token, web3)
+    .then((name) => {
+      data.name = hexToAscii(name);
+      return getTokenSymbol(token, web3)
+    })
+    .then((symbol) => {
+      data.symbol = hexToAscii(symbol);
+      return getUserBalance(token, web3)
+    })
+    .then((bal) => {
+      data.balance = bal;
+      return resolve(data);
+    })
+    .catch((err) => { return reject(err); })
+  })
+}
+
 
 function getUserBalanceUpdate(oldBal, newBal, state, web3) {
   return new Promise((resolve, reject) => {
@@ -66,7 +89,6 @@ function setAllowance(state, web3) {
     const data = `0x095ea7b3${spender}${amount}`;
     getNonce(web3)
     .then((nonce) => {
-      console.log('got nonce', nonce);
       web3.eth.sendTransaction({ to: state.depositToken, data: data, nonce: nonce }, (err, res) => {
         if (err) { return reject(err); }
         return resolve(res);
@@ -96,7 +118,6 @@ function makeDeposit(state, web3) {
       fee: 0,
       ts: null,
     };
-    console.log('state', state);
     let msg;
     getNowFromGateway(data.origChain, web3)
     .then((ts) => {
@@ -107,12 +128,8 @@ function makeDeposit(state, web3) {
     .then((sig) => {
       const hashTmp = ethUtil.hashPersonalMessage(Buffer.from(msg.slice(2), 'hex'));
       const hash = `0x${hashTmp.toString('hex')}`;
-      console.log('msg', msg);
-      console.log('hash', hash);
-      console.log('got sig', sig);
       const sanCheckPub = ethUtil.ecrecover(hashTmp, sig.v, Buffer.from(sig.r, 'hex'), Buffer.from(sig.s, 'hex'));
       const sanCheckAddr = ethUtil.pubToAddress(sanCheckPub).toString('hex');
-      console.log('sanity check user', sanCheckAddr);
       return Deposit(data, hash, sig, web3);
     })
     .then((receipt) => { return resolve(receipt); })
@@ -133,7 +150,6 @@ function requestSig(msg, web3) {
     }, function(err, res) {
       if (err) { return reject(err); }
       else {
-        console.log('result', res);
         const sig = res.result.substr(2, res.result.length);
         const r = sig.substr(0, 64);
         const s = sig.substr(64, 64);
@@ -166,7 +182,6 @@ function getDepositERC20Data(data, hash, sig) {
   const h = leftPad(data.fee.toString(16), 64, '0');
   const i = leftPad(data.ts.toString(16), 64, '0');
   const txData = `${header}${a}${b}${c}${d}${e}${f}${g}${h}${i}`;
-  console.log('forming tx data', txData);
   return txData;
 }
 
@@ -175,7 +190,6 @@ function Deposit(data, hash, sig, web3) {
     const txData = getDepositERC20Data(data, hash, sig);
     getNonce(web3)
     .then((nonce) => {
-      console.log('got nonce', nonce);
       web3.eth.sendTransaction({
         from: web3.eth.accounts[0],
         to: data.origChain,
@@ -184,7 +198,6 @@ function Deposit(data, hash, sig, web3) {
         gas: 500000,
         gasPrice: 1000000000
       }, (err, res) => {
-        console.log('senttx');
         if (err) { return reject(err); }
         return resolve(res);
       });
@@ -206,7 +219,6 @@ function getNonce(web3) {
 function getMessage(data) {
   // NOTE: Solidity tightly packs addresses as 20-byte strings. Everything else
   // is packed as a 32 byte string. This is a weird idiosyncracy.
-  console.log('data', data)
   const a = data.origChain.slice(2);
   const b = data.destChain.slice(2);
   const c = data.token.slice(2);
@@ -217,48 +229,31 @@ function getMessage(data) {
   return `0x${a}${b}${c}${e}${f}${g}${h}`
 }
 
-//
-// function TestHash(data, web3) {
-//   return new Promise((resolve, reject) => {
-//     // testHash(address destChain, address origChain, uint amount, address token, uint[2] data)
-//     // testHash(address,address,uint256,address,uint256[2])
-//     const header = '0x764e8eb2'
-//     const da = leftPad(data.origChain.slice(2), 64, '0');
-//     const db = leftPad(data.destChain.slice(2), 64, 0);
-//     const dc = leftPad(data.amount.toString(16), 64, '0');
-//     const dd = leftPad(data.token.slice(2), 64, '0');
-//     const de = leftPad(data.fee.toString(16), 64, '0');
-//     const df = leftPad(data.ts.toString(16), 64, '0');
-//     const txData = `${header}${db}${da}${dc}${dd}${de}${df}`;
-//
-//     const ma = data.origChain.slice(2);
-//     const mb = data.destChain.slice(2);
-//     const mc = leftPad(data.amount.toString(16), 64, '0');
-//     const md = data.token.slice(2);
-//     const me = leftPad(data.fee.toString(16), 64, '0');
-//     const mf = leftPad(data.ts.toString(16), 64, '0');
-//
-//
-//     const user = web3.eth.accounts[0].slice(2);
-//     const msg2 = `${ma}${mb}${md}${mc}${user}${me}${mf}`;
-//     console.log('msg2', msg2);
-//     const hash = ethUtil.hashPersonalMessage(Buffer.from(msg2, 'hex'));
-//     console.log('hashed test', hash.toString('hex'));
-//     console.log('forming test tx', txData);
-//     web3.eth.call({
-//       from: web3.eth.accounts[0],
-//       to: data.origChain,
-//       data: txData,
-//     }, (err, res) => {
-//       console.log('test hash err', err);
-//       console.log('test hash res', res);
-//     })
-//   })
-// }
+function getTokenName(token, web3) {
+  return new Promise((resolve, reject) => {
+    const data = `0x06fdde03`;
+    web3.eth.call({ to: token, data: data}, (err, res) => {
+      if (err) { return reject(err); }
+      return resolve(res);
+    })
+  })
+}
+
+function getTokenSymbol(token, web3) {
+  return new Promise((resolve, reject) => {
+    const data = `0x95d89b41`;
+    web3.eth.call({ to: token, data: data}, (err, res) => {
+      if (err) { return reject(err); }
+      return resolve(res);
+    })
+  })
+}
+
 
 export {
   getAllowance,
   getAllowanceUpdate,
+  getTokenData,
   getTokenDecimals,
   getUserBalance,
   getUserBalanceUpdate,

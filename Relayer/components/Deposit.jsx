@@ -14,29 +14,12 @@ import {
   setAllowance,
   makeDeposit
 } from '../lib/metamask.js';
-import { getNetworks } from '../lib/networks.js';
 import { checkSubmitInput } from '../lib/errorChecks.js';
 import SuccessModal from './SuccessModal.jsx';
 
 class DepositComponent extends Component {
   constructor(props){
     super(props);
-  }
-
-  componentDidMount() {
-    let { dispatch } = this.props;
-    const interval = setInterval(function() {
-      const provider = web3.version.network;
-      if (provider != null) {
-        clearInterval(interval);
-        dispatch({ type: 'UPDATE_USER', result: web3.eth.accounts[0] });
-        dispatch({ type: 'UPDATE_WEB3_PROVIDER', result: provider });
-        getNetworks(provider, (err, result) => {
-          dispatch({ type: 'CURRENT_NETWORK', result: result.current });
-          dispatch({ type: 'DESTINATION_NETWORKS', result: result.networks });
-        })
-      }
-    }, 100);
   }
 
   updateDepositAmount(evt, data) {
@@ -66,7 +49,7 @@ class DepositComponent extends Component {
     const req = { amount: state.depositAmount, token: state.depositToken };
     dispatch({ type: 'UPDATE_DEPOSIT_TOKEN', result: data.value })
     if (data.value.length == 42) {
-      getUserBalance(data.value, web3, this.props.state)
+      getUserBalance(data.value, web3)
       .then((balance) => {
         dispatch({ type: 'UPDATE_USER_BAL', result: balance })
         return checkSubmitInput(req, state)
@@ -217,7 +200,7 @@ class DepositComponent extends Component {
           <p>Choose an ERC20 token and an amount to move. Once you make the deposit, a relayer will send your tokens to your desired network (destination network).</p>
           <br/>
           <p><b>Choose token to move:</b></p>
-          <Input placeholder='0x12...ef' onChange={this.updateToken.bind(this)} fluid/>
+          <Input placeholder='0x12...ef' style={{width: 500}} onChange={this.updateToken.bind(this)} fluid/>
           <br/>
           {this.renderBalance()}
           <br/>
