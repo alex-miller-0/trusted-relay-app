@@ -33,17 +33,13 @@ module.exports = {
         loaders: ["style", "css", "sass"]
       },
       {
-        test: /\.(png|jpe?g|gif|woff|woff2|ttf|eot|ico)?(\?v=[0-9]\.[0-9]\.[0-9])?$/,
-        loader: 'file-loader?name=fonts/[name].[hash].[ext]?'
+        test: /\.(png|jpeg|gif|woff|woff2|ttf|eot|ico)?(\?v=[0-9]\.[0-9]\.[0-9])?$/,
+        loader: 'file-loader'
       },
       {
         test: /\.css?$/,
         loader: "style-loader!css-loader!"
       },
-      {
-        test: /\.(png|jpg)$/,
-        loader: "file-loader?name=images/[name].[ext]"
-      }
     ],
     plugins: [
       new webpack.DefinePlugin({

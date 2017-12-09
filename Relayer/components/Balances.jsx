@@ -53,18 +53,29 @@ class BalancesComponent extends Component {
   updateBalances() {
     const { state, dispatch } = this.props;
     let balances = [];
-    Object.keys(state.localStore).map((key) => {
-      return getTokenData(key, web3)
-      .then((data) => {
-        balances.push(data);
-        const sortedBals = balances.sort((a, b) => { return a.name[0] > b.name[0] })
-        dispatch({ type: 'BALANCES', result: sortedBals })
+    let sortedBals = [];
+    console.log('state.localStore', state.localStore);
+    if (Object.keys(state.localStore).length > 0) {
+      Object.keys(state.localStore).map((key) => {
+        return getTokenData(key, web3)
+        .then((data) => {
+          balances.push(data);
+          console.log('data', data);
+          sortedBals = balances.sort((a, b) => { return a.name[0] > b.name[0] })
+          dispatch({ type: 'BALANCES', result: sortedBals })
+        })
       })
-    })
+    } else {
+      dispatch({ type: 'BALANCES', result: sortedBals })
+    }
   }
 
   removeBalance(i, evt) {
+    let { deposit, state } = this.props;
     console.log('removing balance', i)
+    delete state.localStore[i.address];
+    localStorage.setItem(deposit.currentNetwork.value, state.localStore);
+    this.updateBalances();
   }
 
   renderBalances() {
@@ -96,7 +107,7 @@ class BalancesComponent extends Component {
                     {item.address}
                   </Table.Cell>
                   <Table.Cell>
-                    <Icon name='cancel' key={i} onClick={this.removeBalance.bind(this, item)}/>
+                    <Button onClick={this.removeBalance.bind(this, item)}>Remove</Button>
                   </Table.Cell>
                 </Table.Row>
               )
