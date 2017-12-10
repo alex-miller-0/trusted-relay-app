@@ -85,7 +85,8 @@ function getAllowanceUpdate(oldAllow, newAllow, state, web3) {
 function setAllowance(state, web3) {
   return new Promise((resolve, reject) => {
     const spender = leftPad(state.currentNetwork.value.slice(2), 64, '0');
-    const amount = leftPad(state.depositAmount.toString(16), 64, '0');
+    const _amount = state.depositAmount * 10 ** state.decimals;
+    const amount = leftPad(_amount.toString(16), 64, '0');
     const data = `0x095ea7b3${spender}${amount}`;
     getNonce(web3)
     .then((nonce) => {
@@ -113,7 +114,7 @@ function makeDeposit(state, web3) {
       origChain: state.currentNetwork.value,
       destChain: state.destinationId,
       token: state.depositToken,
-      amount: state.depositAmount,
+      amount: state.depositAmount * 10 ** state.decimals,
       sender: state.user,
       fee: 0,
       ts: null,

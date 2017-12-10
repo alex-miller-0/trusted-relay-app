@@ -4,7 +4,8 @@
   "description": "Frontend for a Trusted Relayer Network",
   "main": "./index.js",
   "scripts": {
-    "start": "webpack-dev-server"
+    "networks-copy": "node scripts/importConfig.js",
+    "start": "npm run networks-copy && webpack-dev-server"
   },
   "contributors": [
     {
@@ -19,7 +20,7 @@
     "ethereumjs-abi": "^0.6.5",
     "ethereumjs-util": "^5.1.2",
     "json-loader": "^0.5.4",
-    "jsonfile": "^2.3.1",
+    "jsonfile": "^2.4.0",
     "left-pad": "^1.2.0",
     "react": "^16.2.0",
     "react-bootstrap": "^0.30.0-rc.1",

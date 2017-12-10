@@ -1,16 +1,3 @@
 {
-  "networks": {
-    "1": {
-      "name": "Mainnet", "value": "1", "gateway": "https://mainnet.infura.io"
-    },
-    "10000000": {
-      "name": "Grid+ Network", "value": "101", "gateway": "https://relay.gridplus.io"
-    },
-    "5777": {
-      "name": "origin", "value": "0x8b115cfe9ee8c9c7c2b2aec132ca8636637ade3c", "gateway": "http://localhost:7545"
-    },
-    "1512683302313": {
-      "name": "dest", "value": "0xB2af3BEBb1b828820DC4EBACcA222BA628f20e49", "gateway": "http://localhost:7546"
-    }
-  }
+  "networks-source": "/Users/alexmiller/Projects/eth-relayer"
 }
