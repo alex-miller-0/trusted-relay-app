@@ -5,6 +5,8 @@ import About from './About.jsx';
 import Balances from './Balances.jsx';
 import Deposit from './Deposit.jsx';
 import { getNetworks } from '../lib/networks.js';
+import { loadContract } from '../lib/relayEvents.js';
+const TrustedRelayAbi = require('../abis/TrustedRelay.json');
 
 class RelayerComponent extends Component {
   constructor(props){
@@ -22,7 +24,9 @@ class RelayerComponent extends Component {
         getNetworks(provider, (err, result) => {
           dispatch({ type: 'CURRENT_NETWORK', result: result.current });
           dispatch({ type: 'DESTINATION_NETWORKS', result: result.networks });
-        })
+          const contract = loadContract(TrustedRelayAbi.abi, result.current.value, web3)
+          dispatch({ type: 'CONTRACT', result: contract });
+        });
       }
     }, 100);
   }

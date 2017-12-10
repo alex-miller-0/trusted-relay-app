@@ -32,6 +32,10 @@ function getTokenData(token, web3) {
     })
     .then((symbol) => {
       data.symbol = hexToAscii(symbol);
+      return getTokenDecimals(token, web3)
+    })
+    .then((decimals) => {
+      data.decimals = decimals;
       return getUserBalance(token, web3)
     })
     .then((bal) => {
@@ -109,11 +113,8 @@ function setAllowance(state, web3) {
 
 function getTokenDecimals(token, web3) {
   return new Promise((resolve, reject) => {
-    console.log('getting decimals for', token)
     web3.eth.call({ to: token, data: '0x313ce567'}, (err, res) => {
       if (err) { return reject(err); }
-      console.log('got decimals', res)
-      console.log('parsed', parseInt(res, 16))
       return resolve(parseInt(res, 16));
     });
   });
@@ -183,7 +184,6 @@ function getNowFromGateway(addr, web3) {
 }
 
 function getDepositERC20Data(data, hash, sig) {
-  console.log('erc20 data', data);
   const header = '0x43a4f775'
   const a = hash.slice(2);
   const b = leftPad(sig.v.toString(16), 64, '0');
@@ -230,7 +230,6 @@ function getNonce(web3) {
 
 // Get the message (in hex) to sign
 function getMessage(data) {
-  console.log('msg data', data);
   // NOTE: Solidity tightly packs addresses as 20-byte strings. Everything else
   // is packed as a 32 byte string. This is a weird idiosyncracy.
   const a = data.origChain.slice(2);

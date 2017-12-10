@@ -13,6 +13,7 @@ const INITIAL_STATE = {
   input: false,    // Input has been checked
   currentToken: null,
   exceedsBal: false,
+  contract: null,
 }
 
 export default function relayer(state = INITIAL_STATE, action) {
@@ -52,6 +53,12 @@ export default function relayer(state = INITIAL_STATE, action) {
         ...state,
         input: action.result,
       }
+      break;
+    case 'CONTRACT':
+      return {
+        ...state,
+        contract: action.result,
+      };
       break;
     case 'UPDATE_CURRENT_TOKEN':
       return {

@@ -1,9 +1,10 @@
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
-import { Button, Card, Divider, Icon, Input, Table } from 'semantic-ui-react';
+import { Button, Card, Divider, Icon, Input, Segment, Table } from 'semantic-ui-react';
 import {
   getTokenData,
 } from '../lib/metamask.js';
+import { getTotalDeposited, getTotalWithdrawn } from '../lib/relayEvents.js';
 const decoder = require('ethereumjs-abi');
 
 class BalancesComponent extends Component {
@@ -51,16 +52,31 @@ class BalancesComponent extends Component {
   }
 
   updateBalances() {
-    const { state, dispatch } = this.props;
+    const { state, dispatch, deposit } = this.props;
     let balances = [];
     let sortedBals = [];
     if (Object.keys(state.localStore).length > 0) {
       Object.keys(state.localStore).map((key) => {
         return getTokenData(key, web3)
         .then((data) => {
-          balances.push(data);
-          sortedBals = balances.sort((a, b) => { return a.name[0] > b.name[0] })
-          dispatch({ type: 'BALANCES', result: sortedBals })
+          let deposited = 0;
+          // Find the number of tokens currently deposited to the gateway by the user
+          getTotalDeposited(data.address, web3.eth.accounts[0], deposit.contract, web3)
+          .then((_deposited) => {
+            deposited += _deposited;
+            return getTotalWithdrawn(data.address, web3.eth.accounts[0], deposit.contract, web3)
+          })
+          .then((withdrawn) => {
+            deposited -= withdrawn;
+            if (deposited < 0) {
+              console.log('Warning: Your balance is below zero. Please notify your relayer.');
+              deposited = 0;
+            }
+            data.deposited = deposited / (10 ** data.decimals);
+            balances.push(data);
+            sortedBals = balances.sort((a, b) => { return a.name[0] > b.name[0] })
+            dispatch({ type: 'BALANCES', result: sortedBals })
+          })
         })
       })
     } else {
@@ -85,7 +101,8 @@ class BalancesComponent extends Component {
           <Table.Header>
             <Table.Row>
               <Table.HeaderCell>Symbol</Table.HeaderCell>
-              <Table.HeaderCell>Balance</Table.HeaderCell>
+              <Table.HeaderCell>Usable Balance</Table.HeaderCell>
+              <Table.HeaderCell>Deposited</Table.HeaderCell>
               <Table.HeaderCell>Address</Table.HeaderCell>
               <Table.HeaderCell>Remove</Table.HeaderCell>
             </Table.Row>
@@ -99,6 +116,9 @@ class BalancesComponent extends Component {
                   </Table.Cell>
                   <Table.Cell>
                     {item.balance}
+                  </Table.Cell>
+                  <Table.Cell>
+                    {item.deposited}
                   </Table.Cell>
                   <Table.Cell>
                     {item.address}
@@ -132,10 +152,24 @@ class BalancesComponent extends Component {
     }
   }
 
+  renderText() {
+    const { deposit } = this.props;
+    if (deposit.currentNetwork.text) {
+      return (
+        <Segment raised>Currently on network <b>{deposit.currentNetwork.text}</b></Segment>
+      )
+    } else {
+      return;
+    }
+  }
+
   render() {
+    let { deposit } = this.props;
+    const text = deposit.currentNetwork.text;
     return (
-      <div style={{margin: '20px'}}>
+      <div className="container" style={{margin: '20px'}}>
         <h2>Balances</h2>
+        {this.renderText()}
         {this.renderBalances()}
         <Divider/>
         <h2>Add Token</h2>
