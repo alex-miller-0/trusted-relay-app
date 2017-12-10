@@ -1,4 +1,4 @@
-const config = require('../../config.json');
+const config = require('../../networks.json');
 
 function getNetworks(currentNetwork, cb) {
   let current;

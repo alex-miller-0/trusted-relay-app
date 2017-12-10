@@ -2,7 +2,7 @@ import React, { Component } from 'react';
 import { connect } from 'react-redux';
 // import { FormControl, FormGroup, Button, Row, Col } from 'react-bootstrap';
 // import { Promise } from 'bluebird';
-import { Button, Divider, Dropdown, Icon, Input, Menu, Message, Popup, Segment } from 'semantic-ui-react';
+import { Button, Card, Divider, Dropdown, Icon, Input, Menu, Message, Popup, Segment } from 'semantic-ui-react';
 import { relayer } from '../actions/index'
 const leftPad = require('left-pad');
 import {
@@ -16,6 +16,7 @@ import {
 } from '../lib/metamask.js';
 import { checkSubmitInput } from '../lib/errorChecks.js';
 import SuccessModal from './SuccessModal.jsx';
+import Balances from './Balances.jsx';
 
 class DepositComponent extends Component {
   constructor(props){
@@ -28,18 +29,15 @@ class DepositComponent extends Component {
       amount: state.depositAmount,
       token: state.depositToken,
     }
-    dispatch({ type: 'UPDATE_DEPOSIT_AMOUNT', result: parseInt(data.value) })
+    let amount = parseFloat(data.value);
+    const lastChar = data.value[data.value.length - 1];
+    if (lastChar === '.' || lastChar === '0') { amount = data.value; }
+    console.log('amount', amount, typeof amount);
+    dispatch({ type: 'UPDATE_DEPOSIT_AMOUNT', result: amount })
+    dispatch({ type: 'EXCEEDS_BAL', result: parseFloat(data.value) > state.userBal });
     checkSubmitInput(req, state)
     .then((input) => {
       dispatch({ type: 'INPUT_CHECK', result: true });
-      return getAllowance(state, web3);
-    })
-    .then((allowance) => {
-      dispatch({ type: 'ALLOWANCE', result: allowance });
-      return getTokenDecimals(state.depositToken, web3);
-    })
-    .then((decimals) => {
-      dispatch({ type: 'DECIMALS', result: decimals });
     })
     .catch((err) => { console.log('got error', err); })
   }
@@ -54,16 +52,29 @@ class DepositComponent extends Component {
     const sym = dataSplit[3];
     const currentToken = {
       addr: token,
-      balance: bal,
+      balance: parseFloat(bal),
       name: name,
       symbol: sym,
     };
     dispatch({ type: 'UPDATE_DEPOSIT_TOKEN', result: token });
-    dispatch({ type: 'UPDATE_USER_BAL', result: bal });
+    dispatch({ type: 'UPDATE_USER_BAL', result: parseFloat(bal) });
     dispatch({ type: 'UPDATE_CURRENT_TOKEN', result: currentToken });
-    if (data.value.length == 42) {
-      return checkSubmitInput(req, state)
-      .then((input) => { dispatch({ type: 'INPUT_CHECK', result: true }); })
+    if (token.length == 42) {
+      getAllowance(token, state.currentNetwork.value, web3)
+      .then((allowance) => {
+        dispatch({ type: 'ALLOWANCE', result: allowance });
+        return getTokenDecimals(token, web3);
+      })
+      .then((decimals) => {
+        dispatch({ type: 'DECIMALS', result: decimals });
+        return checkSubmitInput(req, state)
+      })
+      .then((input) => {
+        dispatch({ type: 'INPUT_CHECK', result: true });
+      })
+      .catch((err) => {
+        console.log('Error updating token', err);
+      })
     }
   }
 
@@ -98,21 +109,13 @@ class DepositComponent extends Component {
     }
   }
 
-  renderBalance() {
-    const { state } = this.props;
-    if (state.userBal && state.userBal != -1) {
-      return (<p>Current balance: <b>{state.userBal}</b></p>);
-    } else {
-      return;
-    }
-  }
-
   submit() {
     let { state, dispatch } = this.props;
     let req = {
       amount: state.depositAmount,
       token: state.depositToken,
     }
+    console.log('submit amount', req.amount, typeof req.amount);
     checkSubmitInput(req, state)
     .then(() => {
       dispatch({ type: 'INPUT_CHECK', result: true });
@@ -139,12 +142,24 @@ class DepositComponent extends Component {
       dispatch({ type: 'ALLOWANCE', result: -1 });
       // This may update immediately, but we'll probably have to sit on an
       // interval until the value updates.
-      return getAllowanceUpdate(allowance, allowance, state, web3)
+      return getAllowanceUpdate(0, 0, state, web3)
     })
     .then((newAllowance) => {
       dispatch({ type: 'ALLOWANCE', result: newAllowance });
     })
     .catch((err) => { console.log('Error setting allowance', err); })
+  }
+
+  renderExceedsBal() {
+    const { state } = this.props;
+    if (state.exceedsBal) {
+      return (
+        <Message negative>
+          <Message.Header>Insufficient Balance</Message.Header>
+          <p>Warning: This amount exceeds your token balance.</p>
+        </Message>
+      );
+    }
   }
 
   renderActionButton() {
@@ -157,14 +172,18 @@ class DepositComponent extends Component {
       return;
     } else if (allowance === -1 || bal === -1) {
       return (
-        <Button loading>
-          Waiting
-        </Button>
+        <div>
+          <br/><Divider/>
+          <Button loading>
+            Waiting
+          </Button>
+        </div>
       )
     } else if (allowance < amount) {
       return (
         <div>
-          <Button primary onClick={this.allow.bind(this)}>
+          <br/><Divider/>
+          <Button primary onClick={this.allow.bind(this)} disabled={state.exceedsBal}>
             Step 1: Set Allowance
           </Button>
           <Popup
@@ -172,12 +191,14 @@ class DepositComponent extends Component {
             content="You will need to grant permission for the Gateway to move your tokens."
             basic
           />
+          {this.renderExceedsBal()}
         </div>
       )
     } else {
       return (
         <div>
-          <Button primary onClick={this.submit.bind(this)}>
+          <br/><Divider/>
+          <Button primary onClick={this.submit.bind(this)} disabled={state.exceedsBal}>
             Step 2: Start Relay
           </Button>
           <Popup
@@ -185,6 +206,7 @@ class DepositComponent extends Component {
             content="You must deposit your tokens to the Gateway before the relayer can award you new tokens on the other chain. Don't worry - these tokens won't be moved from the Gateway."
             basic
           />
+          {this.renderExceedsBal()}
         </div>
       )
     }
@@ -192,7 +214,7 @@ class DepositComponent extends Component {
 
 
   renderTokens() {
-    let { balances, state } = this.props;
+    let { balances, dispatch, state } = this.props;
     let myTokens = [];
     balances.balances.forEach((b) => {
       const tmp = {
@@ -213,16 +235,24 @@ class DepositComponent extends Component {
       }
     }
 
-    return (
-      <Dropdown
-        placeholder='Choose token'
-        fluid selection
-        options={myTokens}
-        text={defaultText}
-        value={defaultValue}
-        onChange={this.updateToken.bind(this)}
-      />
-    )
+    if (balances.balances.length == 0) {
+      return (
+        <Segment raised>
+          <p>You have no token balances! Please go to the <b>Balances page</b> and add your tokens.</p>
+        </Segment>
+      )
+    } else {
+      return (
+        <Dropdown
+          placeholder='Choose token'
+          fluid selection
+          options={myTokens}
+          text={defaultText}
+          value={defaultValue}
+          onChange={this.updateToken.bind(this)}
+        />
+      )
+    }
   }
 
   renderDestination() {
@@ -248,14 +278,21 @@ class DepositComponent extends Component {
   }
 
   renderAmount() {
-    const { state } = this.props;
-    return (
-      <Input
-        placeholder='0.1234'
-        value={state.depositAmount || ''}
-        onChange={this.updateDepositAmount.bind(this)}
-      />
-    );
+    const { balances, state } = this.props;
+    if (balances.balances.length > 0) {
+      return (
+        <div>
+          <p><b>Choose amount:</b></p>
+          <Input
+            placeholder='0.1234'
+            value={state.depositAmount || ''}
+            onChange={this.updateDepositAmount.bind(this)}
+          />
+        </div>
+      );
+    } else {
+      return;
+    }
   }
 
 
@@ -286,16 +323,12 @@ class DepositComponent extends Component {
           {this.renderTokens()}
           <br/>
           <br/>
-          <p><b>Choose amount:</b></p>
           {this.renderAmount()}
-          <Divider/>
-          <br/>
           {this.renderActionButton()}
         </div>
       </div>
     );
   }
-
 }
 
 const mapStoreToProps = (store) => {

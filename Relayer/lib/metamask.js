@@ -56,12 +56,12 @@ function getUserBalanceUpdate(oldBal, newBal, state, web3) {
   })
 }
 
-function getAllowance(state, web3) {
+function getAllowance(token, _spender, web3) {
   return new Promise((resolve, reject) => {
     const owner = leftPad(web3.eth.accounts[0].slice(2), 64, '0');
-    const spender = leftPad(state.currentNetwork.value.slice(2), 64, '0');
+    const spender = leftPad(_spender.slice(2), 64, '0');
     const data = `0xdd62ed3e${owner}${spender}`;
-    web3.eth.call({ to: state.depositToken, data: data }, (err, res) => {
+    web3.eth.call({ to: token, data: data }, (err, res) => {
       if (err) { return reject(err); }
       return resolve(parseInt(res, 16));
     })
@@ -70,6 +70,7 @@ function getAllowance(state, web3) {
 
 function getAllowanceUpdate(oldAllow, newAllow, state, web3) {
   return new Promise((resolve, reject) => {
+    console.log('oldAllowance', oldAllow, 'newAllowance', newAllow);
     setTimeout(() => {
       // Set promise interval to check for a new allowance
       if (oldAllow != newAllow) { return resolve(newAllow); }
@@ -86,11 +87,18 @@ function setAllowance(state, web3) {
   return new Promise((resolve, reject) => {
     const spender = leftPad(state.currentNetwork.value.slice(2), 64, '0');
     const _amount = state.depositAmount * 10 ** state.decimals;
+    console.log('setting allowance:', _amount);
+    console.log('decimals?', state.decimals);
     const amount = leftPad(_amount.toString(16), 64, '0');
     const data = `0x095ea7b3${spender}${amount}`;
     getNonce(web3)
     .then((nonce) => {
-      web3.eth.sendTransaction({ to: state.depositToken, data: data, nonce: nonce }, (err, res) => {
+      web3.eth.sendTransaction({
+        to: state.depositToken,
+        data: data,
+        nonce: nonce,
+        gas: 100000
+      }, (err, res) => {
         if (err) { return reject(err); }
         return resolve(res);
       })
@@ -101,8 +109,11 @@ function setAllowance(state, web3) {
 
 function getTokenDecimals(token, web3) {
   return new Promise((resolve, reject) => {
+    console.log('getting decimals for', token)
     web3.eth.call({ to: token, data: '0x313ce567'}, (err, res) => {
       if (err) { return reject(err); }
+      console.log('got decimals', res)
+      console.log('parsed', parseInt(res, 16))
       return resolve(parseInt(res, 16));
     });
   });
@@ -172,6 +183,7 @@ function getNowFromGateway(addr, web3) {
 }
 
 function getDepositERC20Data(data, hash, sig) {
+  console.log('erc20 data', data);
   const header = '0x43a4f775'
   const a = hash.slice(2);
   const b = leftPad(sig.v.toString(16), 64, '0');
@@ -218,6 +230,7 @@ function getNonce(web3) {
 
 // Get the message (in hex) to sign
 function getMessage(data) {
+  console.log('msg data', data);
   // NOTE: Solidity tightly packs addresses as 20-byte strings. Everything else
   // is packed as a 32 byte string. This is a weird idiosyncracy.
   const a = data.origChain.slice(2);
@@ -227,7 +240,8 @@ function getMessage(data) {
   const f = data.sender.slice(2);
   const g = leftPad(data.fee.toString(16), 64, '0');
   const h = leftPad(data.ts.toString(16), 64, '0');
-  return `0x${a}${b}${c}${e}${f}${g}${h}`
+  const msg = `0x${a}${b}${c}${e}${f}${g}${h}`;
+  return msg;
 }
 
 function getTokenName(token, web3) {

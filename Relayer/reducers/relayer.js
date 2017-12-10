@@ -12,6 +12,7 @@ const INITIAL_STATE = {
   destinations: [],
   input: false,    // Input has been checked
   currentToken: null,
+  exceedsBal: false,
 }
 
 export default function relayer(state = INITIAL_STATE, action) {
@@ -38,6 +39,12 @@ export default function relayer(state = INITIAL_STATE, action) {
       return {
         ...state,
         destinations: action.result
+      };
+      break;
+    case 'EXCEEDS_BAL':
+      return {
+        ...state,
+        exceedsBal: action.result,
       };
       break;
     case 'INPUT_CHECK':
