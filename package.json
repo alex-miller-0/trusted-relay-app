@@ -14,7 +14,7 @@
   ],
   "license": "MIT",
   "dependencies": {
-    "bluebird": "^3.4.1",
+    "bluebird": "^3.5.1",
     "css-loader": "^0.25.0",
     "eth-sig-util": "^1.4.0",
     "ethereumjs-abi": "^0.6.5",

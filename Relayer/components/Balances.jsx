@@ -4,7 +4,9 @@ import { Button, Card, Divider, Icon, Input, Segment, Table } from 'semantic-ui-
 import {
   getTokenData,
 } from '../lib/metamask.js';
-import { getTotalDeposited, getTotalWithdrawn } from '../lib/relayEvents.js';
+import { getTotalDeposited, getTotalWithdrawn, findTokens, getTokens } from '../lib/relayEvents.js';
+import { loadLocalStore } from '../lib/util.js';
+
 const decoder = require('ethereumjs-abi');
 
 class BalancesComponent extends Component {
@@ -16,14 +18,13 @@ class BalancesComponent extends Component {
     const { dispatch } = this.props;
     const interval = setInterval(() => {
       const { deposit  } = this.props;
-      if (deposit.currentNetwork && deposit.currentNetwork.value) {
+      if (deposit.currentNetwork && deposit.currentNetwork.value && web3) {
+        clearInterval(interval);
         // Balances are stored in local store in a JSON object indexed by
         // the network id (remember this is the address of the Gateway contract)
-        const _local = localStorage.getItem(deposit.currentNetwork.value);
-        const local = _local ? JSON.parse(_local) : {};
+        const local = loadLocalStore(deposit.currentNetwork.value);
         dispatch({ type: 'LOCAL_STORE', result: local })
-        this.updateBalances()
-        clearInterval(interval);
+        this.updateBalances();
       }
     }, 100);
   }
@@ -55,33 +56,39 @@ class BalancesComponent extends Component {
     const { state, dispatch, deposit } = this.props;
     let balances = [];
     let sortedBals = [];
-    if (Object.keys(state.localStore).length > 0) {
-      Object.keys(state.localStore).map((key) => {
-        return getTokenData(key, web3)
-        .then((data) => {
-          let deposited = 0;
-          // Find the number of tokens currently deposited to the gateway by the user
-          getTotalDeposited(data.address, web3.eth.accounts[0], deposit.contract, web3)
-          .then((_deposited) => {
-            deposited += _deposited;
-            return getTotalWithdrawn(data.address, web3.eth.accounts[0], deposit.contract, web3)
-          })
-          .then((withdrawn) => {
-            deposited -= withdrawn;
-            if (deposited < 0) {
-              console.log('Warning: Your balance is below zero. Please notify your relayer.');
-              deposited = 0;
-            }
-            data.deposited = deposited / (10 ** data.decimals);
-            balances.push(data);
-            sortedBals = balances.sort((a, b) => { return a.name[0] > b.name[0] })
-            dispatch({ type: 'BALANCES', result: sortedBals })
-          })
-        })
+    let tokenKeys = Object.keys(state.localStore);
+    if (tokenKeys.length > 0) {
+      getTokens(tokenKeys, web3.eth.accounts[0], deposit.contract, web3)
+      .then((tokenData) => {
+        dispatch({ type: 'BALANCES', result: tokenData })
       })
     } else {
       dispatch({ type: 'BALANCES', result: sortedBals })
     }
+  }
+
+  // Search for any tokens the user has deposited or had withdrawn on this
+  // chain's gateway.
+  loadTokens() {
+    const { deposit, dispatch } = this.props;
+    let tokens;
+    let user = web3.eth.accounts[0];
+    let local = loadLocalStore(deposit.currentNetwork.value);
+
+    findTokens(user, deposit.contract, web3)
+    .then((tokens) => {
+      return getTokens(tokens, user, deposit.contract, web3)
+    })
+    .map((token) => {
+      local[token.address] = token.balance;
+      return;
+    })
+    .then(() => {
+      const toSave = JSON.stringify(local);
+      localStorage.setItem(deposit.currentNetwork.value, toSave);
+      dispatch({ type: 'LOCAL_STORE', result: local })
+      this.updateBalances();
+    })
   }
 
   removeBalance(i, evt) {
@@ -172,8 +179,12 @@ class BalancesComponent extends Component {
         {this.renderText()}
         {this.renderBalances()}
         <Divider/>
-        <h2>Add Token</h2>
-        <p>Search for a token by address</p>
+        <h2>Load Tokens</h2>
+        <p>Used this relayer before? Load all tokens and balances associated with your address.
+          This will include tokens that have been relayed from another network.</p>
+        <Button onClick={this.loadTokens.bind(this)}>Load Tokens</Button>
+        <h2>Add New Token</h2>
+        <p>Search for a token by address.</p>
         <Input
           style={{width: 500}}
           placeholder='0x12...ef'
