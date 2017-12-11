@@ -16,7 +16,6 @@ function findTokens(user, contract, web3) {
       { fromBlock: 0, toBlock: 'latest'});
     event.get((err, events) => {
       if (err) { return reject(err); }
-      console.log('events', events)
       events.forEach((evt) => { tokens[evt.args.token] = true; })
       const event2 = contract.RelayedDeposit({ sender: user },
       { fromBlock: 0, toBlock: 'latest' });
@@ -39,7 +38,7 @@ function getTokens(tokens, user, contract, web3) {
       return getOneToken(token, user, contract, web3)
     })
     .map((datum) => {
-      data.push(datum);
+      if (datum) { data.push(datum); }
       return;
     })
     .then(() => {
@@ -62,20 +61,22 @@ function getOneToken(token, user, contract, web3) {
       return getTotalDeposited(token, user, contract, web3)
     })
     .then((_deposited) => {
+      console.log('token', token, 'deposited', _deposited)
       deposited += _deposited;
       return getTotalWithdrawn(token, user, contract, web3)
     })
     .then((withdrawn) => {
+      console.log('token', token, 'withdrawn', withdrawn)
       deposited -= withdrawn;
       if (deposited < 0) {
         console.log('Warning: Your balance is below zero. Please notify your relayer.');
         deposited = 0;
       }
       const sizedDeposit = deposited / (10 ** data.decimals);
-      data.deposit = sizedDeposit;
+      data.deposited = sizedDeposit;
       return resolve(data);
     })
-    .catch((err) => { return reject(err); })
+    .catch((err) => { return resolve(null); })
   })
 }
 

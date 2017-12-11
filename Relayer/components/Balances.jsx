@@ -74,7 +74,6 @@ class BalancesComponent extends Component {
     let tokens;
     let user = web3.eth.accounts[0];
     let local = loadLocalStore(deposit.currentNetwork.value);
-
     findTokens(user, deposit.contract, web3)
     .then((tokens) => {
       return getTokens(tokens, user, deposit.contract, web3)
@@ -116,25 +115,30 @@ class BalancesComponent extends Component {
           </Table.Header>
           <Table.Body>
             {state.balances.map((item, i) => {
-              return (
-                <Table.Row key={`row-${i}`}>
-                  <Table.Cell>
-                    {item.symbol}
-                  </Table.Cell>
-                  <Table.Cell>
-                    {item.balance}
-                  </Table.Cell>
-                  <Table.Cell>
-                    {item.deposited}
-                  </Table.Cell>
-                  <Table.Cell>
-                    {item.address}
-                  </Table.Cell>
-                  <Table.Cell>
-                    <Button onClick={this.removeBalance.bind(this, item)}>Remove</Button>
-                  </Table.Cell>
-                </Table.Row>
-              )
+              if (item.name != "" && item.symbol != "" && !isNaN(item.decimals)
+                && !isNaN(item.balance) && item.address && item.address != '0x0000000000000000000000000000000000000000') {
+                return (
+                  <Table.Row key={`row-${i}`}>
+                    <Table.Cell>
+                      {item.symbol}
+                    </Table.Cell>
+                    <Table.Cell>
+                      {item.balance}
+                    </Table.Cell>
+                    <Table.Cell>
+                      {item.deposited}
+                    </Table.Cell>
+                    <Table.Cell>
+                      {item.address}
+                    </Table.Cell>
+                    <Table.Cell>
+                      <Button onClick={this.removeBalance.bind(this, item)}>Remove</Button>
+                    </Table.Cell>
+                  </Table.Row>
+                )
+              } else {
+                return;
+              }
             })}
           </Table.Body>
         </Table>

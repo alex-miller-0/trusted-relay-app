@@ -32,7 +32,6 @@ class DepositComponent extends Component {
     let amount = parseFloat(data.value);
     const lastChar = data.value[data.value.length - 1];
     if (lastChar === '.' || lastChar === '0') { amount = data.value; }
-    console.log('amount', amount, typeof amount);
     dispatch({ type: 'UPDATE_DEPOSIT_AMOUNT', result: amount })
     dispatch({ type: 'EXCEEDS_BAL', result: parseFloat(data.value) > state.userBal });
     checkSubmitInput(req, state)
@@ -112,10 +111,9 @@ class DepositComponent extends Component {
   submit() {
     let { state, dispatch } = this.props;
     let req = {
-      amount: state.depositAmount,
+      amount: parseFloat(state.depositAmount),
       token: state.depositToken,
     }
-    console.log('submit amount', req.amount, typeof req.amount);
     checkSubmitInput(req, state)
     .then(() => {
       dispatch({ type: 'INPUT_CHECK', result: true });
@@ -137,7 +135,10 @@ class DepositComponent extends Component {
   allow() {
     const { state, dispatch } = this.props;
     setAllowance(state, web3)
-    .then((success) => { return getAllowance(state, web3); })
+    .then((success) => {
+      console.log('allow(): getting allowance with', state.depositToken, state.contract.address, web3)
+      return getAllowance(state.depositToken, state.contract.address, web3);
+    })
     .then((allowance) => {
       dispatch({ type: 'ALLOWANCE', result: -1 });
       // This may update immediately, but we'll probably have to sit on an
@@ -179,7 +180,7 @@ class DepositComponent extends Component {
           </Button>
         </div>
       )
-    } else if (allowance < amount) {
+    } else if (allowance < parseFloat(amount)) {
       return (
         <div>
           <br/><Divider/>

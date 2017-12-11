@@ -4,6 +4,7 @@ import { Tab } from 'semantic-ui-react';
 import About from './About.jsx';
 import Balances from './Balances.jsx';
 import Deposit from './Deposit.jsx';
+import History from './History.jsx';
 import { getNetworks } from '../lib/networks.js';
 import { loadContract } from '../lib/relayEvents.js';
 const TrustedRelayAbi = require('../abis/TrustedRelay.json');
@@ -24,7 +25,7 @@ class RelayerComponent extends Component {
         getNetworks(provider, (err, result) => {
           dispatch({ type: 'CURRENT_NETWORK', result: result.current });
           dispatch({ type: 'DESTINATION_NETWORKS', result: result.networks });
-          const contract = loadContract(TrustedRelayAbi.abi, result.current.value, web3)
+          const contract = loadContract(TrustedRelayAbi.abi, result.current.value, web3);
           dispatch({ type: 'CONTRACT', result: contract });
         });
       }
@@ -36,14 +37,13 @@ class RelayerComponent extends Component {
     const tabs = [
       { menuItem: 'Balances', render: () => <Balances/> },
       { menuItem: 'Deposit', render: () => <Deposit/> },
+      { menuItem: 'History', render: () => <History/> },
       { menuItem: 'About', render: () => <About/> }
     ]
     return (
       <div style={{margin: '20px'}}>
         <h1>Trusted Relay</h1>
-        <p>
-          Move your assets to any Ethereum-based chain with the click of a button!
-        </p>
+        <p>Move your assets to any Ethereum-based chain with the click of a button!</p>
         <Tab panes={tabs}/>
       </div>
     );
