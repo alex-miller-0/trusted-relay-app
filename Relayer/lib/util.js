@@ -18,7 +18,38 @@ function loadLocalStore(i) {
   return local;
 }
 
+function parseEvents(evts) {
+  let newEvts = [];
+  evts.forEach((_evt) => {
+    if(!_evt.symbol) {
+      console.log('evt with no symbol', _evt)
+    }
+    let evt = {
+      symbol: _evt.symbol,
+      type: null,
+      amount: _evt.amount / (10 ** _evt.decimals),
+      timestamp: _evt.tsNow.toString(),
+    };
+    if (_evt.newToken) {
+      // Relayed events
+      evt.type = 'Withdrawal'
+      evt.token = _evt.newToken;
+      evt.fromChain = _evt.fromChain;
+    } else {
+      // Deposit events
+      evt.type = 'Deposit';
+      evt.toChain = _evt.toChain;
+      evt.token = _evt.token;
+    }
+    newEvts.push(evt);
+  });
+  return newEvts;
+}
+
+
+
 export {
   hexToAscii,
   loadLocalStore,
+  parseEvents,
 }

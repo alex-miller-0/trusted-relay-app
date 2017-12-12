@@ -28,6 +28,53 @@ function findTokens(user, contract, web3) {
   })
 }
 
+// Get all deposit and relay events associated with a user and a token on this chain
+function getEventHistory(tokens, user, contract, web3) {
+  return new Promise((resolve, reject) => {
+    let allEvents = [];
+    getTokens(tokens, user, contract, web3)
+    .map((tokenData) => {
+      return getTokenHistory(tokenData, user, contract, web3)
+    })
+    .map((tokenEvents) => {
+      allEvents = allEvents.concat(tokenEvents);
+      return;
+    })
+    .then(() => {
+      const sortedEvents = allEvents.sort((a, b) => { a.tsNow > b.tsNow; });
+      return resolve(sortedEvents);
+    })
+    .catch((err) => { reject(err); })
+  })
+}
+
+function getTokenHistory(tokenData, user, contract, web3) {
+  return new Promise((resolve, reject) => {
+    let allEvents = [];
+    const event = contract.Deposit({ sender: user, token: tokenData.address },
+      { fromBlock: 0, toBlock: 'latest'});
+    event.get((err, events) => {
+      if (err) { return reject(err); }
+      events.forEach((evt) => {
+        evt.args.symbol = tokenData.symbol;
+        evt.args.decimals = tokenData.decimals;
+        allEvents.push(evt.args);
+      })
+      const event2 = contract.RelayedDeposit({ sender: user, newToken: tokenData.address },
+        { fromBlock: 0, toBlock: 'latest' });
+      event2.get((err2, events2) => {
+        if (err2) { return reject(err2); }
+        events2.forEach((evt2) => {
+          evt2.args.symbol = tokenData.symbol;
+          evt2.args.decimals = tokenData.decimals;
+          allEvents.push(evt2.args);
+        })
+        return resolve(allEvents);
+      })
+    })
+  })
+}
+
 // Given an array of token addresses, get all the token data and balances
 // Returns a sorted array with each element of form
 // { name, decimals, symbol, balance, address }
@@ -38,7 +85,7 @@ function getTokens(tokens, user, contract, web3) {
       return getOneToken(token, user, contract, web3)
     })
     .map((datum) => {
-      if (datum) { data.push(datum); }
+      if (datum && datum.symbol) { data.push(datum); }
       return;
     })
     .then(() => {
@@ -61,12 +108,10 @@ function getOneToken(token, user, contract, web3) {
       return getTotalDeposited(token, user, contract, web3)
     })
     .then((_deposited) => {
-      console.log('token', token, 'deposited', _deposited)
       deposited += _deposited;
       return getTotalWithdrawn(token, user, contract, web3)
     })
     .then((withdrawn) => {
-      console.log('token', token, 'withdrawn', withdrawn)
       deposited -= withdrawn;
       if (deposited < 0) {
         console.log('Warning: Your balance is below zero. Please notify your relayer.');
@@ -76,7 +121,7 @@ function getOneToken(token, user, contract, web3) {
       data.deposited = sizedDeposit;
       return resolve(data);
     })
-    .catch((err) => { return resolve(null); })
+    .catch((err) => { return reject(err); })
   })
 }
 
@@ -122,6 +167,7 @@ function getTotalWithdrawn(token, user, contract, web3) {
 
 export {
   findTokens,
+  getEventHistory,
   getTokens,
   getTotalDeposited,
   getTotalWithdrawn,

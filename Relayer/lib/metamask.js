@@ -10,7 +10,7 @@ function getUserBalance(token, web3) {
     const data = `0x70a08231${leftPad(web3.eth.accounts[0].slice(2), 64, '0')}`;
     // Get the total balance (atomic units) for the user
     web3.eth.call({ to: token, data: data}, (err, res) => {
-      if (err || res == '0x0') { return reject(err || 'Could not get balance'); }
+      if (err) { return reject(err || 'Could not get balance'); }
       // Get decimals of the token
       const decData = '0x313ce567';
       web3.eth.call({ to: token, data: decData }, (err, dec) => {
@@ -25,24 +25,31 @@ function getUserBalance(token, web3) {
 function getTokenData(token, web3) {
   return new Promise((resolve, reject) => {
     let data = { address: token };
-    getTokenName(token, web3)
-    .then((name) => {
-      data.name = hexToAscii(name);
-      return getTokenSymbol(token, web3)
-    })
-    .then((symbol) => {
-      data.symbol = hexToAscii(symbol);
-      return getTokenDecimals(token, web3)
-    })
-    .then((decimals) => {
-      data.decimals = decimals;
-      return getUserBalance(token, web3)
-    })
-    .then((bal) => {
-      data.balance = bal;
+    if (token == '0x0000000000000000000000000000000000000000') {
+      data.name = 'Ether';
+      data.symbol = 'ETH';
+      data.decimals = 18;
       return resolve(data);
-    })
-    .catch((err) => { return reject(err); })
+    } else {
+      getTokenName(token, web3)
+      .then((name) => {
+        if (name != '0x0') { data.name = hexToAscii(name); }
+        return getTokenSymbol(token, web3)
+      })
+      .then((symbol) => {
+        if (symbol != '0x0') { data.symbol = hexToAscii(symbol); }
+        return getTokenDecimals(token, web3)
+      })
+      .then((decimals) => {
+        data.decimals = decimals;
+        return getUserBalance(token, web3)
+      })
+      .then((bal) => {
+        data.balance = bal;
+        return resolve(data);
+      })
+      .catch((err) => { return reject(err); })
+    }
   })
 }
 
@@ -74,7 +81,6 @@ function getAllowance(token, _spender, web3) {
 
 function getAllowanceUpdate(oldAllow, newAllow, state, web3) {
   return new Promise((resolve, reject) => {
-    console.log('oldAllowance', oldAllow, 'newAllowance', newAllow);
     setTimeout(() => {
       // Set promise interval to check for a new allowance
       if (oldAllow != newAllow) { return resolve(newAllow); }
@@ -91,8 +97,6 @@ function setAllowance(state, web3) {
   return new Promise((resolve, reject) => {
     const spender = leftPad(state.currentNetwork.value.slice(2), 64, '0');
     const _amount = state.depositAmount * 10 ** state.decimals;
-    console.log('setting allowance:', _amount);
-    console.log('decimals?', state.decimals);
     const amount = leftPad(_amount.toString(16), 64, '0');
     const data = `0x095ea7b3${spender}${amount}`;
     getNonce(web3)
