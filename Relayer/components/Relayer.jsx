@@ -1,6 +1,6 @@
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
-import { Tab } from 'semantic-ui-react';
+import { Divider, Tab } from 'semantic-ui-react';
 import About from './About.jsx';
 import Balances from './Balances.jsx';
 import Deposit from './Deposit.jsx';
@@ -19,14 +19,16 @@ class RelayerComponent extends Component {
     const interval = setInterval(function() {
       const provider = web3.version.network;
       if (provider != null) {
-        clearInterval(interval);
         dispatch({ type: 'UPDATE_USER', result: web3.eth.accounts[0] });
         dispatch({ type: 'UPDATE_WEB3_PROVIDER', result: provider });
         getNetworks(provider, (err, result) => {
           dispatch({ type: 'CURRENT_NETWORK', result: result.current });
           dispatch({ type: 'DESTINATION_NETWORKS', result: result.networks });
-          const contract = loadContract(TrustedRelayAbi.abi, result.current.value, web3);
-          dispatch({ type: 'CONTRACT', result: contract });
+          if (result.current && Object.keys(result.current) > 0) {
+            clearInterval(interval);
+            const contract = loadContract(TrustedRelayAbi.abi, result.current.value, web3);
+            dispatch({ type: 'CONTRACT', result: contract });
+          }
         });
       }
     }, 100);
@@ -40,13 +42,34 @@ class RelayerComponent extends Component {
       { menuItem: 'History', render: () => <History/> },
       { menuItem: 'About', render: () => <About/> }
     ]
-    return (
-      <div style={{margin: '20px'}}>
-        <h1>Trusted Relay</h1>
-        <p>Move your assets to any Ethereum-based chain with the click of a button!</p>
-        <Tab panes={tabs}/>
-      </div>
-    );
+    if (!state.currentNetwork || Object.keys(state.currentNetwork) == 0) {
+      return (
+        <div style={{ margin: '20px' }}>
+          <h1>Trusted Relay</h1>
+          <p>Move your assets to any Ethereum-based chain with the click of a button!</p>
+          <center>
+            <Divider/>
+            <br/><br/>
+            <h3>Wrong Network</h3>
+            <p>We can't connect to your Metamask extension. Please set your Metamask provider to one of the following gateways:</p>
+            {
+              state.destinations.map((network, i) => {
+                return (<h4 key={`h3-${i}`}>{network.text}</h4>)
+              })
+            }
+          </center>
+
+        </div>
+      )
+    } else {
+      return (
+        <div style={{margin: '20px'}}>
+          <h1>Trusted Relay</h1>
+          <p>Move your assets to any Ethereum-based chain with the click of a button!</p>
+          <Tab panes={tabs}/>
+        </div>
+      );
+    }
   }
 
 }

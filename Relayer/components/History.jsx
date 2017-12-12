@@ -84,7 +84,7 @@ class RelayerComponent extends Component {
   render() {
     const { state } = this.props;
     return (
-      <div style={{margin: '20px'}}>
+      <div className="container" style={{margin: '20px'}}>
         <h2>History</h2>
         <p>View all deposits and relays that have occurred on this chain.</p>
         <Button onClick={this.loadHistory.bind(this)}>Load History</Button>

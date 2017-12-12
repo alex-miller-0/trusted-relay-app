@@ -24,7 +24,7 @@ class AboutComponent extends Component {
       { menuItem: 'Balances', render: () => <p>balances</p> },
     ]
     return (
-      <div style={{margin: '20px'}}>
+      <div className="container" style={{margin: '20px'}}>
         <Accordion fluid styled>
         <Accordion.Title active={activeIndex === 0} index={0} onClick={this.handleClick}>
           <Icon name='dropdown' />
