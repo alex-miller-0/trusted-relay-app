@@ -22,10 +22,10 @@ class RelayerComponent extends Component {
         dispatch({ type: 'UPDATE_USER', result: web3.eth.accounts[0] });
         dispatch({ type: 'UPDATE_WEB3_PROVIDER', result: provider });
         getNetworks(provider, (err, result) => {
-          dispatch({ type: 'CURRENT_NETWORK', result: result.current });
           dispatch({ type: 'DESTINATION_NETWORKS', result: result.networks });
-          if (result.current && Object.keys(result.current) > 0) {
+          if (result.current && Object.keys(result.current).length > 0) {
             clearInterval(interval);
+            dispatch({ type: 'CURRENT_NETWORK', result: result.current });
             const contract = loadContract(TrustedRelayAbi.abi, result.current.value, web3);
             dispatch({ type: 'CONTRACT', result: contract });
           }
