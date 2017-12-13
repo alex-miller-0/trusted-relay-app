@@ -72,6 +72,7 @@ class BalancesComponent extends Component {
   loadTokens() {
     const { deposit, dispatch } = this.props;
     let tokens;
+    localStorage.setItem(deposit.currentNetwork.value, JSON.stringify({}));
     let user = web3.eth.accounts[0];
     let local = loadLocalStore(deposit.currentNetwork.value);
     findTokens(user, deposit.contract, web3)

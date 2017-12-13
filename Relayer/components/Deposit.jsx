@@ -100,7 +100,7 @@ class DepositComponent extends Component {
     if (state.web3Provider != null) {
       return (
         <Segment raised>
-          <b>{state.currentNetwork.name}</b> (http://mainnet.infura.io)
+          {state.currentNetwork.text}
         </Segment>
       );
     } else {
@@ -136,8 +136,7 @@ class DepositComponent extends Component {
     const { state, dispatch } = this.props;
     setAllowance(state, web3)
     .then((success) => {
-      console.log('allow(): getting allowance with', state.depositToken, state.contract.address, web3)
-      return getAllowance(state.depositToken, state.contract.address, web3);
+      return getAllowance(state.depositToken, state.currentNetwork.value, web3);
     })
     .then((allowance) => {
       dispatch({ type: 'ALLOWANCE', result: -1 });

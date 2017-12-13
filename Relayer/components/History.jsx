@@ -31,7 +31,7 @@ class RelayerComponent extends Component {
 
   renderHistory() {
     const { deposit } = this.props;
-    if (deposit.history) {
+    if (deposit.history && deposit.history.length > 0) {
       return (
         <Table celled>
           <Table.Header>
@@ -75,6 +75,12 @@ class RelayerComponent extends Component {
             })}
           </Table.Body>
         </Table>
+      )
+    } else if (deposit.history && deposit.history.length == 0) {
+      return (
+        <div>
+          <br/><h4>You have no deposits or withdrawals on this chain.</h4>          
+        </div>
       )
     } else {
       return;

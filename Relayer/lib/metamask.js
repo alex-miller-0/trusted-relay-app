@@ -84,7 +84,7 @@ function getAllowanceUpdate(oldAllow, newAllow, state, web3) {
     setTimeout(() => {
       // Set promise interval to check for a new allowance
       if (oldAllow != newAllow) { return resolve(newAllow); }
-      getAllowance(state, web3)
+      getAllowance(state.depositToken, state.currentNetwork.value, web3)
       .then((allowance) => {
         return resolve(getAllowanceUpdate(newAllow, allowance, state, web3));
       })
