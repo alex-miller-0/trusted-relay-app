@@ -8,6 +8,21 @@ function loadContract(abi, address, web3) {
   return instance;
 }
 
+// NOTE: This is super weird, but `oldToken` and `newToken` are flipped
+// on the react app. If you go to a web3 console and get events, the
+// arguments are correct. Here they're flipped.
+// I'm perplexed as to what is causing this. For now, I'm just going
+// to ignore it.
+// This is ONLY for RelayedDeposit events
+// TODO: Fix this
+function _hack(evt) {
+  const newToken = evt.oldToken;
+  const oldToken = evt.newToken;
+  evt.oldToken = newToken;
+  evt.newToken = oldToken;
+  return evt;
+}
+
 // Search Deposit and RelayedDeposit events for all unique tokens
 function findTokens(user, contract, web3) {
   return new Promise((resolve, reject) => {
@@ -21,7 +36,11 @@ function findTokens(user, contract, web3) {
       { fromBlock: 0, toBlock: 'latest' });
       event2.get((err2, events2) => {
         if (err2) { return reject(err2); }
-        events2.forEach((evt) => { tokens[evt.args.newToken] = true; })
+        events2.forEach((evt2) => {
+          // SEE _hack
+          evt2 = _hack(evt2);
+          tokens[evt2.args.oldToken] = true;
+        })
         return resolve(Object.keys(tokens));
       })
     })
@@ -85,7 +104,7 @@ function getTokens(tokens, user, contract, web3) {
       return getOneToken(token, user, contract, web3)
     })
     .map((datum) => {
-      if (datum && datum.symbol) { data.push(datum); }
+      if (datum && datum.symbol != '' && !isNaN(datum.decimals)) { data.push(datum); }
       return;
     })
     .then(() => {
