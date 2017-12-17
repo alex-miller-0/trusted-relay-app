@@ -25,4 +25,8 @@ called `config.json` and put the location of your eth-relayer `networks.json` fi
 }
 ```
 
-*NOTE: If you make changes to your networks file in your eth-relayer repo, you should run `npm run networks-copy` to re-copy the file.
+*NOTE: If you make changes to your networks file in your eth-relayer repo, you should run `npm run networks-copy` to re-copy the file.*
+
+### History not loading?
+
+There is an active bug with Metamask where switching providers fails to fetch events. This means when you make a deposit and try to find the corresponding withdrawal on the destination chain, it will often not show up. The only way to fix this at the moment is to reboot your browser. I have filed an issue [here](https://github.com/MetaMask/metamask-extension/issues/2761) and will update the README when it is resolved.  
