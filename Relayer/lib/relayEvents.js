@@ -37,7 +37,7 @@ function findTokens(user, contract, web3) {
       event2.get((err2, events2) => {
         if (err2) { return reject(err2); }
         events2.forEach((evt2) => {
-          // SEE _hack
+          // SEE: _hack()
           evt2 = _hack(evt2);
           tokens[evt2.args.oldToken] = true;
         })
