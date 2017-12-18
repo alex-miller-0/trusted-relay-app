@@ -34,42 +34,62 @@ class RelayerComponent extends Component {
     }, 100);
   }
 
-  render() {
+  renderHeader() {
+    return (
+      <div>
+        <h1>Trusted Relay</h1>
+        <p>Move your assets to any Ethereum-based chain with the click of a button!</p>
+      </div>
+    )
+  }
+
+  renderContent() {
     const { state } = this.props;
     const tabs = [
       { menuItem: 'Balances', render: () => <Balances/> },
       { menuItem: 'Deposit', render: () => <Deposit/> },
       { menuItem: 'History', render: () => <History/> },
       { menuItem: 'About', render: () => <About/> }
-    ]
+    ];
     if (!state.currentNetwork || Object.keys(state.currentNetwork) == 0) {
       return (
-        <div style={{ margin: '20px' }}>
-          <h1>Trusted Relay</h1>
-          <p>Move your assets to any Ethereum-based chain with the click of a button!</p>
-          <center>
-            <Divider/>
-            <br/><br/>
-            <h3>Wrong Network</h3>
-            <p>We can't connect to your Metamask extension. Please set your Metamask provider to one of the following gateways:</p>
-            {
-              state.destinations.map((network, i) => {
-                return (<h4 key={`h3-${i}`}>{network.text}</h4>)
-              })
-            }
-          </center>
-
-        </div>
-      )
-    } else {
-      return (
-        <div style={{margin: '20px'}}>
-          <h1>Trusted Relay</h1>
-          <p>Move your assets to any Ethereum-based chain with the click of a button!</p>
-          <Tab panes={tabs}/>
+        <div>
+          <Divider/>
+          <br/><br/>
+          <h3>Wrong Network</h3>
+          <p>We can't connect to your Metamask extension. Please set your Metamask provider to one of the following gateways:</p>
+          {
+            state.destinations.map((network, i) => {
+              return (<h4 key={`h3-${i}`}>{network.text}</h4>)
+            })
+          }
         </div>
       );
+    } else if (web3.eth.accounts.length === 0) {
+      return (
+        <div>
+          <Divider/>
+          <br/><br/>
+          <h3>Locked Account</h3>
+          <p>Your Metamask account is currently locked. Please sign into Metamask.</p>
+        </div>
+      );
+    } else {
+      return (
+        <Tab panes={tabs}/>
+      );
     }
+  }
+
+  render() {
+    return (
+      <div style={{ margin: '20px' }}>
+        {this.renderHeader()}
+        <center>
+          {this.renderContent()}
+        </center>
+      </div>
+    )
   }
 
 }
