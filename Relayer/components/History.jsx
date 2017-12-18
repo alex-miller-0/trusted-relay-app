@@ -1,10 +1,11 @@
 // Deposit and withdrawal history
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
-import { Button, Table } from 'semantic-ui-react';
+import { Button, Popup, Table } from 'semantic-ui-react';
 import About from './About.jsx';
 import { getEventHistory, findTokens } from '../lib/relayEvents.js';
 import { loadLocalStore, parseEvents } from '../lib/util.js';
+import FaQuestionCircle from 'react-icons/lib/fa/question-circle';
 
 
 class RelayerComponent extends Component {
@@ -79,7 +80,7 @@ class RelayerComponent extends Component {
     } else if (deposit.history && deposit.history.length == 0) {
       return (
         <div>
-          <br/><h4>You have no deposits or withdrawals on this chain.</h4>          
+          <br/><h4>You have no deposits or withdrawals on this chain.</h4>
         </div>
       )
     } else {
@@ -92,7 +93,12 @@ class RelayerComponent extends Component {
     return (
       <div className="container" style={{margin: '20px'}}>
         <h2>History</h2>
-        <p>View all deposits and relays that have occurred on this chain.</p>
+        <p>View all deposits and relays that have occurred on this chain.&nbsp;<Popup
+            trigger={<FaQuestionCircle/>}
+            content="Depositing a token into a relayer Gateway (this site) locks the tokens until you withdraw them. Withdrawals each correspond
+            to a deposit from a different chain. Both events are shown in your history, which you can load by clicking the button below."
+            basic
+        /></p>
         <Button onClick={this.loadHistory.bind(this)}>Load History</Button>
         {this.renderHistory()}
       </div>

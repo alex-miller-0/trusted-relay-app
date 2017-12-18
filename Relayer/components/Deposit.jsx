@@ -17,6 +17,8 @@ import {
 import { checkSubmitInput } from '../lib/errorChecks.js';
 import SuccessModal from './SuccessModal.jsx';
 import Balances from './Balances.jsx';
+import FaQuestionCircle from 'react-icons/lib/fa/question-circle';
+
 
 class DepositComponent extends Component {
   constructor(props){
@@ -187,7 +189,7 @@ class DepositComponent extends Component {
             Step 1: Set Allowance
           </Button>
           <Popup
-            trigger={<Icon icon='add' />}
+            trigger={<FaQuestionCircle/>}
             content="You will need to grant permission for the Gateway to move your tokens."
             basic
           />
@@ -202,7 +204,7 @@ class DepositComponent extends Component {
             Step 2: Start Relay
           </Button>
           <Popup
-            trigger={<Icon icon='add' />}
+            trigger={<FaQuestionCircle/>}
             content="You must deposit your tokens to the Gateway before the relayer can award you new tokens on the other chain. Don't worry - these tokens won't be moved from the Gateway."
             basic
           />
@@ -313,13 +315,21 @@ class DepositComponent extends Component {
           <p><b>You are currently on network:</b></p>
           {this.renderCurrentNetwork()}
           <Divider/>
-          <p><b>Destination network:</b></p>
+          <p><b>Destination network:</b>&nbsp;<Popup
+              trigger={<FaQuestionCircle/>}
+              content="This is the network to which your coins will be moved."
+              basic
+          /></p>
           {this.renderDestination()}
           <Divider/>
           <h3>Deposit Tokens</h3>
           <p>Choose an ERC20 token and an amount to move. Once you make the deposit, a relayer will send your tokens to your desired network (destination network).</p>
           <br/>
-          <p><b>Choose token to move:</b></p>
+          <p><b>Choose token to move:</b>&nbsp;<Popup
+              trigger={<FaQuestionCircle/>}
+              content="You can load tokens by going to your balances and looking up a token address on this chain."
+              basic
+          /></p>
           {this.renderTokens()}
           <br/>
           <br/>

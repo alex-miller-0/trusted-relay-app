@@ -1,11 +1,12 @@
 import React, { Component } from 'react';
 import { connect } from 'react-redux';
-import { Button, Card, Divider, Icon, Input, Segment, Table } from 'semantic-ui-react';
+import { Button, Card, Divider, Icon, Input, Popup, Segment, Table } from 'semantic-ui-react';
 import {
   getTokenData,
 } from '../lib/metamask.js';
 import { getTotalDeposited, getTotalWithdrawn, findTokens, getTokens } from '../lib/relayEvents.js';
 import { loadLocalStore } from '../lib/util.js';
+import FaQuestionCircle from 'react-icons/lib/fa/question-circle';
 
 const decoder = require('ethereumjs-abi');
 
@@ -185,8 +186,13 @@ class BalancesComponent extends Component {
         {this.renderBalances()}
         <Divider/>
         <h2>Load Tokens</h2>
-        <p>Used this relayer before? Load all tokens and balances associated with your address.
-          This will include tokens that have been relayed from another network.</p>
+        <p>Find tokens associated with your address.&nbsp;
+        <Popup
+          trigger={<FaQuestionCircle/>}
+          content="This site only tracks the balances of tokens you add. Any tokens deposited on a different chain and relayed
+          to this chain will also be tracked automatically."
+          basic
+        /></p>
         <Button onClick={this.loadTokens.bind(this)}>Load Tokens</Button>
         <h2>Add New Token</h2>
         <p>Search for a token by address.</p>

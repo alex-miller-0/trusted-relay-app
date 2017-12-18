@@ -36,9 +36,10 @@ class RelayerComponent extends Component {
 
   renderHeader() {
     return (
-      <div>
-        <h1>Trusted Relay</h1>
+      <div style={{ 'marginTop': 50, 'marginLeft': 30 }}>
+        <h1><img src="public/random-icon.png" style={{ width: 100, height: 100 }}/>Trusted Relay</h1>
         <p>Move your assets to any Ethereum-based chain with the click of a button!</p>
+        <br/>
       </div>
     )
   }
@@ -85,9 +86,7 @@ class RelayerComponent extends Component {
     return (
       <div style={{ margin: '20px' }}>
         {this.renderHeader()}
-        <center>
-          {this.renderContent()}
-        </center>
+        {this.renderContent()}
       </div>
     )
   }

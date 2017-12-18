@@ -6,6 +6,7 @@ import {
   Relayer,
 } from './components';
 import 'semantic-ui-css/semantic.min.css';
+import Favicon from 'react-favicon';
 
 render(
   <Provider store={store}>
