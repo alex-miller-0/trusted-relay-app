@@ -6,7 +6,7 @@ import About from './About.jsx';
 import { getEventHistory, findTokens } from '../lib/relayEvents.js';
 import { loadLocalStore, parseEvents } from '../lib/util.js';
 import FaQuestionCircle from 'react-icons/lib/fa/question-circle';
-
+import { relayer } from '../actions';
 
 class RelayerComponent extends Component {
   constructor(props){
@@ -26,7 +26,11 @@ class RelayerComponent extends Component {
     .then((events) => {
       const parsedEvents = parseEvents(events);
       console.log('parsedEvents', parsedEvents);
-      dispatch({ type: 'HISTORY', result: parsedEvents })
+      dispatch({ type: 'HISTORY', result: parsedEvents });
+      relayer.getDeposits(web3.eth.accounts[0])
+    })
+    .then((deposits) => {
+      console.log('got deposits', deposits);
     })
   }
 

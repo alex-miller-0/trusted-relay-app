@@ -1,6 +1,8 @@
 // Scan relay events for deposits and such
 import Promise from 'bluebird';
 import { getTokenData, getTokenDecimals } from './metamask.js';
+const relayAbi = require('../abis/TrustedRelay.json').abi;
+const networks = require('../../networks.json');
 
 function loadContract(abi, address, web3) {
   const contract = web3.eth.contract(abi);
