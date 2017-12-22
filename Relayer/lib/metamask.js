@@ -154,6 +154,22 @@ function makeDeposit(state, web3) {
   })
 }
 
+// Given an old token address and the address of this chain's gateway, find
+// if there is a mapped token. This will determine if a user-executed relay
+// can happen.
+function getMapping(oldToken, oldChainId, newChain) {
+  return new Promise((resolve, reject) => {
+    if (!oldToken || !oldChainId) { return resolve(false); }
+    else {
+      newChain.getTokenMapping(oldChainId, oldToken, (err, res) => {
+        if (err) return reject(err)
+        return resolve(res);
+      })
+    }
+  })
+}
+
+
 // =============================================================================
 // INTERNAL
 // =============================================================================
@@ -273,6 +289,7 @@ export {
   getAllowanceUpdate,
   getTokenData,
   getTokenDecimals,
+  getMapping,
   getUserBalance,
   getUserBalanceUpdate,
   makeDeposit,

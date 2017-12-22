@@ -17,8 +17,9 @@ class RelayerComponent extends Component {
   // chain's gateway.
   loadHistory() {
     const { deposit, dispatch } = this.props;
+    const currentNet = deposit.currentNetwork.value;
     let user = web3.eth.accounts[0];
-    let local = loadLocalStore(deposit.currentNetwork.value);
+    let local = loadLocalStore(currentNet);
     let history;
     findTokens(user, deposit.contract, web3)
     .then((tokens) => {
@@ -26,10 +27,10 @@ class RelayerComponent extends Component {
     })
     .then((events) => {
       history = parseEvents(events);
-      return relayer.getPendingDeposits(web3.eth.accounts[0], deposit.currentNetwork.value)
+      return relayer.getPendingDeposits(web3.eth.accounts[0], currentNet)
     })
     .then((pending) => {
-      return fillPendingDeposits(pending, web3);
+      return fillPendingDeposits(pending, deposit.contract, web3);
     })
     .then((pending) => {
       history = history.concat(pending);

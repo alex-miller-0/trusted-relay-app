@@ -1,9 +1,8 @@
 // Scan relay events for deposits and such
 import Promise from 'bluebird';
-import { getTokenData, getTokenDecimals } from './metamask.js';
+import { getMapping, getTokenData, getTokenDecimals } from './metamask.js';
 const relayAbi = require('../abis/TrustedRelay.json').abi;
 const networks = require('../../networks.json');
-
 function loadContract(abi, address, web3) {
   const contract = web3.eth.contract(abi);
   const instance = contract.at(address);
@@ -97,31 +96,55 @@ function getTokenHistory(tokenData, user, contract, web3) {
   })
 }
 
-function fillPendingDeposits(pending, web3) {
+function fillPendingDeposits(pending, contract, web3) {
   return new Promise((resolve, reject) => {
     let tokens = {};
+    let newTokens = {};
     let events = [];
-    pending.forEach((d) => { tokens[d.oldToken] = false; })
-    Promise.map(Object.keys(tokens), (token) => {
-      return getTokenData(token, web3)
+    pending.forEach((d) => { tokens[d.oldToken] = { fromChain: d.fromChain }; })
+    Promise.map(Object.keys(tokens), (oldToken) => {
+      return getNewToken(oldToken, tokens, contract)
     })
     .map((data) => {
-      if (data.symbol != '' && !isNaN(data.decimals)) { tokens[data.address] = data; }
+      newTokens[data.oldToken] = data.newToken;
       return;
     })
-    .then(() => {
+    .then((data) => {
       pending.forEach((d) => {
+        const newToken = newTokens[d.oldToken];
         let tmp = {
           type: 'Pending Withdrawal',
           fromChain: d.fromChain,
           timestamp: d.timestamp,
           amount: d.amount,
+          symbol: newToken.symbol,
+          decimals: newToken.decimals,
         };
         events.push(tmp);
       })
       return;
     })
     .then(() => { return resolve(events); })
+    .catch((err) => { return reject(err); })
+  })
+}
+
+// Get the data for a potential new token. This involves fetching a mapping.
+function getNewToken(oldToken, oldTokens, contract) {
+  return new Promise((resolve, reject) => {
+    const fromChain = oldTokens[oldToken].fromChain;
+    getMapping(oldToken, fromChain, contract)
+    .then((mapping) => {
+      return getTokenData(mapping, web3)
+    })
+    .then((data) => {
+      const ret = {
+        newToken: data,
+        oldToken: oldToken,
+        fromChain: fromChain,
+      };
+      return resolve(ret);
+    })
     .catch((err) => { return reject(err); })
   })
 }
