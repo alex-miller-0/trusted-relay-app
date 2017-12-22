@@ -69,6 +69,7 @@ function getEventHistory(tokens, user, contract, web3) {
   })
 }
 
+
 function getTokenHistory(tokenData, user, contract, web3) {
   return new Promise((resolve, reject) => {
     let allEvents = [];
@@ -93,6 +94,35 @@ function getTokenHistory(tokenData, user, contract, web3) {
         return resolve(allEvents);
       })
     })
+  })
+}
+
+function fillPendingDeposits(pending, web3) {
+  return new Promise((resolve, reject) => {
+    let tokens = {};
+    let events = [];
+    pending.forEach((d) => { tokens[d.oldToken] = false; })
+    Promise.map(Object.keys(tokens), (token) => {
+      return getTokenData(token, web3)
+    })
+    .map((data) => {
+      if (data.symbol != '' && !isNaN(data.decimals)) { tokens[data.address] = data; }
+      return;
+    })
+    .then(() => {
+      pending.forEach((d) => {
+        let tmp = {
+          type: 'Pending Withdrawal',
+          fromChain: d.fromChain,
+          timestamp: d.timestamp,
+          amount: d.amount,
+        };
+        events.push(tmp);
+      })
+      return;
+    })
+    .then(() => { return resolve(events); })
+    .catch((err) => { return reject(err); })
   })
 }
 
@@ -187,6 +217,7 @@ function getTotalWithdrawn(token, user, contract, web3) {
 
 
 export {
+  fillPendingDeposits,
   findTokens,
   getEventHistory,
   getTokens,

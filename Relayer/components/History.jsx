@@ -3,7 +3,7 @@ import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { Button, Popup, Table } from 'semantic-ui-react';
 import About from './About.jsx';
-import { getEventHistory, findTokens } from '../lib/relayEvents.js';
+import { getEventHistory, findTokens, fillPendingDeposits } from '../lib/relayEvents.js';
 import { loadLocalStore, parseEvents } from '../lib/util.js';
 import FaQuestionCircle from 'react-icons/lib/fa/question-circle';
 import { relayer } from '../actions';
@@ -19,18 +19,21 @@ class RelayerComponent extends Component {
     const { deposit, dispatch } = this.props;
     let user = web3.eth.accounts[0];
     let local = loadLocalStore(deposit.currentNetwork.value);
+    let history;
     findTokens(user, deposit.contract, web3)
     .then((tokens) => {
       return getEventHistory(tokens, user, deposit.contract, web3)
     })
     .then((events) => {
-      const parsedEvents = parseEvents(events);
-      console.log('parsedEvents', parsedEvents);
-      dispatch({ type: 'HISTORY', result: parsedEvents });
-      relayer.getDeposits(web3.eth.accounts[0])
+      history = parseEvents(events);
+      return relayer.getPendingDeposits(web3.eth.accounts[0], deposit.currentNetwork.value)
     })
-    .then((deposits) => {
-      console.log('got deposits', deposits);
+    .then((pending) => {
+      return fillPendingDeposits(pending, web3);
+    })
+    .then((pending) => {
+      history = history.concat(pending);
+      dispatch({ type: 'HISTORY', result: history });
     })
   }
 
