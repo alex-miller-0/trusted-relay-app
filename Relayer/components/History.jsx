@@ -40,6 +40,7 @@ class RelayerComponent extends Component {
 
   renderHistory() {
     const { deposit } = this.props;
+    console.log('deposit.history', deposit.history)
     if (deposit.history && deposit.history.length > 0) {
       return (
         <Table celled>
@@ -51,6 +52,7 @@ class RelayerComponent extends Component {
               <Table.HeaderCell>To ChainId</Table.HeaderCell>
               <Table.HeaderCell>From ChainId</Table.HeaderCell>
               <Table.HeaderCell>Time</Table.HeaderCell>
+              <Table.HeaderCell>Action</Table.HeaderCell>
             </Table.Row>
           </Table.Header>
           <Table.Body>
@@ -75,6 +77,13 @@ class RelayerComponent extends Component {
                     </Table.Cell>
                     <Table.Cell>
                       {item.timestamp}
+                    </Table.Cell>
+                    <Table.Cell>
+                      {(() => {
+                        if(item.type == 'Pending Withdrawal') {
+                          return (<Button>Withdraw</Button>)
+                        }
+                      })()}
                     </Table.Cell>
                   </Table.Row>
                 )
