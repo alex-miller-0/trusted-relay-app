@@ -3,6 +3,7 @@ import React, { Component } from 'react';
 import { connect } from 'react-redux';
 import { Button, Popup, Table } from 'semantic-ui-react';
 import About from './About.jsx';
+import { submitWithdrawal } from '../lib/metamask.js';
 import { getEventHistory, findTokens, fillPendingDeposits } from '../lib/relayEvents.js';
 import { loadLocalStore, parseEvents } from '../lib/util.js';
 import FaQuestionCircle from 'react-icons/lib/fa/question-circle';
@@ -36,6 +37,28 @@ class RelayerComponent extends Component {
       history = history.concat(pending);
       dispatch({ type: 'HISTORY', result: history });
     })
+  }
+
+  withdraw(item) {
+    const { deposit, dispatch } = this.props;
+    if (!item.data) { throw new Error(`Could not find data for item ${JSON.stringify(item)}`); }
+    relayer.getSignature(item.data)
+    .then((sig) => {
+      console.log('got sig', sig);
+      let idx = null;
+      console.log('sig.hash', sig.hash)
+      deposit.history.forEach((item, i) => {
+        if(item.data && item.data.hash == sig.hash) { idx = i; }
+      })
+      deposit.history[idx].data.relayerR = sig.r;
+      deposit.history[idx].data.relayerS = sig.s;
+      deposit.history[idx].data.relayerV = sig.v + 27;
+      return submitWithdrawal(deposit.history[idx].data, deposit.contract)
+    })
+    .then(() => {
+      console.log('made it');
+    })
+    .catch((err) => { throw Error(`Error withdrawing: ${err}`); })
   }
 
   renderHistory() {
@@ -81,7 +104,7 @@ class RelayerComponent extends Component {
                     <Table.Cell>
                       {(() => {
                         if(item.type == 'Pending Withdrawal') {
-                          return (<Button>Withdraw</Button>)
+                          return (<Button onClick={this.withdraw.bind(this, item)}>Withdraw</Button>)
                         }
                       })()}
                     </Table.Cell>

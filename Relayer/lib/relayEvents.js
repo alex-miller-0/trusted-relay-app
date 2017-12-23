@@ -119,6 +119,7 @@ function fillPendingDeposits(pending, contract, web3) {
           amount: d.amount,
           symbol: newToken.symbol,
           decimals: newToken.decimals,
+          data: d,
         };
         events.push(tmp);
       })

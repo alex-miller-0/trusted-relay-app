@@ -154,6 +154,23 @@ function makeDeposit(state, web3) {
   })
 }
 
+// Make a withdrawal with the relayer's signature to move tokens
+function submitWithdrawal(data, contract) {
+  return new Promise((resolve, reject) => {
+    console.log('data', data)
+    const args = [data.hash, [data.senderV + 27, data.relayerV],
+      [data.senderR, data.relayerR], [data.senderS, data.relayerS],
+      [data.oldToken, data.sender], data.amount, data.fromChain,
+      [data.fee, data.timestamp]];
+    console.log('args', args)
+    contract.relayDeposit(args, {}, (err, res) => {
+      if (err) return reject(err)
+      console.log('res', res)
+      return resolve(res);
+    })
+  });
+}
+
 // Given an old token address and the address of this chain's gateway, find
 // if there is a mapped token. This will determine if a user-executed relay
 // can happen.
@@ -294,4 +311,5 @@ export {
   getUserBalanceUpdate,
   makeDeposit,
   setAllowance,
+  submitWithdrawal,
 }
