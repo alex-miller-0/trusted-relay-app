@@ -52,8 +52,8 @@ class RelayerComponent extends Component {
       })
       deposit.history[idx].data.relayerR = sig.r;
       deposit.history[idx].data.relayerS = sig.s;
-      deposit.history[idx].data.relayerV = sig.v + 27;
-      return submitWithdrawal(deposit.history[idx].data, deposit.contract)
+      deposit.history[idx].data.relayerV = sig.v;
+      return submitWithdrawal(deposit.history[idx].data, web3)
     })
     .then(() => {
       console.log('made it');

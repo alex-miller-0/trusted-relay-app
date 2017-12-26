@@ -105,7 +105,8 @@ function setAllowance(state, web3) {
         to: state.depositToken,
         data: data,
         nonce: nonce,
-        gas: 100000
+        gas: 100000,
+        gasPrice: 1000000000,
       }, (err, res) => {
         if (err) { return reject(err); }
         return resolve(res);
@@ -155,19 +156,25 @@ function makeDeposit(state, web3) {
 }
 
 // Make a withdrawal with the relayer's signature to move tokens
-function submitWithdrawal(data, contract) {
+function submitWithdrawal(data, web3) {
   return new Promise((resolve, reject) => {
-    console.log('data', data)
-    const args = [data.hash, [data.senderV + 27, data.relayerV],
-      [data.senderR, data.relayerR], [data.senderS, data.relayerS],
-      [data.oldToken, data.sender], data.amount, data.fromChain,
-      [data.fee, data.timestamp]];
-    console.log('args', args)
-    contract.relayDeposit(args, {}, (err, res) => {
-      if (err) return reject(err)
-      console.log('res', res)
-      return resolve(res);
+    const txData = getRelayDepositData(data);
+    getNonce(web3)
+    .then((nonce) => {
+      web3.eth.sendTransaction({
+        to: data.toChain,
+        nonce: nonce,
+        data: txData,
+        gas: 500000,
+        gasPrice: 1000000000,
+      }, (err, res) => {
+        console.log('err', err)
+        console.log('res', res)
+        if (err) { return reject(err); }
+        return resolve(res);
+      })
     })
+    .catch((err) => { return reject(err); })
   });
 }
 
@@ -233,6 +240,24 @@ function getDepositERC20Data(data, hash, sig) {
   const i = leftPad(data.ts.toString(16), 64, '0');
   const txData = `${header}${a}${b}${c}${d}${e}${f}${g}${h}${i}`;
   return txData;
+}
+
+function getRelayDepositData(data) {
+  // relayDeposit(bytes32,uint8[2],bytes32[2],bytes32[2],address[2],uint256,address,uint256[2])
+  const header = '0x99c5fe15';
+
+  const a = data.hash.slice(2);
+  const b = `${leftPad((data.senderV + 27).toString(16), 64, '0')}${leftPad(data.relayerV.toString(16), 64, '0')}`;
+  const c = `${data.senderR.slice(2)}${data.relayerR.slice(2)}`;
+  const d = `${data.senderS.slice(2)}${data.relayerS.slice(2)}`;
+  const e = `${leftPad(data.oldToken.slice(2), 64, '0')}${leftPad(data.sender.slice(2), 64, '0')}`;
+  const f = leftPad(data.amount.toString(16), 64, '0');
+  const g = leftPad(data.fromChain.slice(2), 64, '0');
+  const h = `${leftPad(data.fee.toString(16), 64, '0')}${leftPad(data.timestamp.toString(16), 64, '0')}`;
+
+  const txData = `${header}${a}${b}${c}${d}${e}${f}${g}${h}`;
+  return txData;
+
 }
 
 function Deposit(data, hash, sig, web3) {
